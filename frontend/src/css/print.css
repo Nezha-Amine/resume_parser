@@ -1,0 +1,134 @@
+/* print.css */
+@media print {
+    body, html, #wrapper {
+        width: 100%;
+    }
+    
+    *{
+        box-sizing: border-box;
+    }
+    body {
+        color: #fff;
+        font-family: 'Times New Roman', Times, serif;
+        font-size: 16px;
+        margin: 0; /* Remove default margins */
+    }
+    :root{
+        -bs-gutter-x: 0;
+    }
+    
+    /* Hide everything by default */
+    
+    /* Show only the right panel */
+    .right-panel {
+        display: block;
+        height: auto; /* Adjust height for printing */
+        overflow: visible; /* Ensure content is visible */
+        border: none;
+        background-color: #fff;
+        color: #000;
+        width: 100%; /* Ensure full width */
+    }
+    .left {
+        display: none;
+    }
+    
+    h6 {
+        font-weight: bold;
+    }
+    
+    .form-control {
+        color: #000;
+    }
+    
+    .custom-icon {
+        color: #9C27B0;
+    }
+    
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 20px;
+    }
+    
+    .left-image {
+        max-width: 12%;
+    }
+    
+    .right-image {
+        max-width: 22%;
+        margin-left: auto;
+    }
+    
+    .job-title-container {
+        background: linear-gradient(to right, #70c9c1, #4a90e2);
+        -webkit-print-color-adjust: exact; 
+        print-color-adjust: exact; 
+        width: 100vw;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        border-top: 2px solid #34beb2;
+        border-bottom: 2px solid #34beb2;
+    }
+    
+    #display-job-title, #display-annee {
+        color: #ffffff;
+        font-weight: bold;
+        font-size: 22px;
+        /* margin: 5px 0; */
+    }
+    
+    #display-job-title {
+        text-transform: uppercase;
+    }
+    
+    #display-annee {
+        font-size: 16px;
+    }
+    
+    #section-title {
+        color: #70c9c1;
+    }
+    .right{
+        width: 100%;
+        padding: 0 !important;
+    }
+    #formation-content {
+        margin-bottom: 1rem;
+    }
+    
+    #formation-content h6 {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    
+    #formation-content p {
+        /* margin: 5px 0; */
+        font-size: 14px;
+    }
+    
+    #formation-content #fdate, #formation-content .fdate {
+        font-weight: bold;
+    }
+    
+    #work-summary-content, #formation-content, #experience-content {
+        text-align: justify;
+    }
+    
+    /* Page margins for print */
+    @page {
+        size: A4;
+        margin: 0 ;
+        margin-bottom: 60px;
+        padding: 0 ;
+    } 
+    .g-3{
+        --bs-gutter-x: 2rem;
+        --bs-gutter-y : 2rem;
+    }
+}

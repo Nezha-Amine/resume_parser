@@ -1,0 +1,133 @@
+
+body {
+    background-color: #9C27B0;
+    color: #fff;
+    font-family: 'Times New Roman', Times, serif; 
+    font-size: 18px;
+    forced-color-adjust: none;
+}
+h6{
+    font-weight: bold;
+}
+.container-fluid {
+    max-width: 1300px;
+    height: 100vh; /* Ensure full viewport height */
+    overflow: hidden; /* Prevent overall page scroll */
+}
+
+.left-panel, .right-panel {
+    height: 100vh; /* Full height to enable scrolling within the panels */
+    overflow-y: auto; /* Enable vertical scrolling */
+    padding: 20px;
+    border: none; /* Remove any borders */
+}
+
+.left-panel {
+    background-color: #D500F9;
+}
+
+.right-panel {
+    background-color: #fff;
+    color: #000;
+    padding: 0;
+}
+
+.form-control, .form-label {
+    color: #000;
+}
+
+.header-icon {
+    display: inline-block;
+    margin-right: 8px;
+}
+
+.custom-icon {
+    color: #9C27B0;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+}
+
+.left-image {
+    max-width: 12%; /* Adjust size as needed */
+}
+
+.right-image {
+    max-width: 22%; /* Adjust size as needed */
+    margin-left: auto; /* Pushes the right image to the far right */
+}
+
+.job-title-container {
+    background: linear-gradient(to right, #70c9c1, #4a90e2);
+    padding: 10px;
+    width: 100%; /* Ensure the width fills the entire right panel */
+    text-align: center;
+    display: flex;
+    flex-direction: column; /* Stack children in a column */
+    justify-content: center; /* Center content vertically */
+    align-items: center; /* Center content horizontally */
+    border-top: 2px solid #34beb2;
+    border-bottom: 2px solid #34beb2;
+}
+
+
+#display-job-title, #display-annee {
+    color: #ffffff; /* White text color */
+    font-weight: bold; /* Bold text */
+    font-size: 22px; /* Adjust font size if needed */
+    margin: 5px 0; /* Margin to space out text */
+}
+
+#display-job-title {
+    text-transform: uppercase; /* Make text uppercase */
+
+}
+#display-annee {
+    font-size: 16px; /* Adjust font size if needed */
+}
+
+#section-title {
+    color: #70c9c1;
+}
+
+#formation-content {
+    margin-bottom: 1rem;
+}
+#formation-content h6 {
+    font-size: 16px; /* Adjust font size as needed */
+    font-weight: bold; /* Make the text bold */
+    margin-bottom: 10px; /* Space below the <h6> */
+}
+
+#formation-content p {
+    margin: 5px 0; /* Space above and below each <p> */
+    font-size: 14px; /* Adjust font size as needed */
+}
+#formation-content #fdate , #formation-content .fdate {
+    font-weight: bold;
+}
+
+#work-summary-content , #formation-content , #experience-content {
+    text-align: justify; 
+}
+
+
+.inputs_container input:focus {
+    outline: none; 
+    border: none; 
+    box-shadow: none; 
+}
+.span-block {
+    display: block;
+}
+
+.tasks-container {
+    border-radius: 5px;
+    max-height: 130px;
+    overflow-y: auto;
+}
+
