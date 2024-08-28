@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
-import jsonData from "../jsonData.json";
+import jsonData  from "../../../backend1/jsonData.json";
 import plusIcon from "../assets/plusIcon.svg";
 import minusIcon from "../assets/minusIcon.svg";
 import cache from "../assets/cache.png";
@@ -9,17 +9,21 @@ import logoNetsense from "../assets/logoNetsense.png";
 import html2pdf from "html2pdf.js";
 
 const ResumeBuilder = () => {
+  let jsonString = jsonData .data ;
+  jsonString = jsonString[0][0];
+  
+  const Data  = JSON.parse(jsonString);
   const [personalInfo, setPersonalInfo] = useState({
-    name: jsonData.nom_prenom || "",
-    jobTitle: jsonData.profil || "",
-    expYears: jsonData.annees_d_experience || "",
-    workSummary: jsonData.work_summary || "",
+    name: Data.nom_prenom || "",
+    jobTitle: Data.profil || "",
+    expYears: Data.annees_d_experience || "",
+    workSummary: Data.work_summary || "",
   });
 
-  const [education, setEducation] = useState(jsonData.education || []);
-  const [experience, setExperience] = useState(jsonData.experience || []);
-  const [competences, setCompetences] = useState(jsonData.competences || []);
-  const [projets, setProjets] = useState(jsonData.projets || []);
+  const [education, setEducation] = useState(Data.education || []);
+  const [experience, setExperience] = useState(Data.experience || []);
+  const [competences, setCompetences] = useState(Data.competences || []);
+  const [projets, setProjets] = useState(Data.projets || []);
 
   const handlePersonalInfoChange = (e) => {
     const { id, value } = e.target;
