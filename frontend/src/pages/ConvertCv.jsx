@@ -1,10 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as Yup from "yup";
 import useApi from "../api";
 import { useNavigate } from "react-router-dom";
-
 
 function ConvertCv() {
   // Validation schema using Yup
@@ -26,6 +25,7 @@ function ConvertCv() {
         );
       }),
   });
+
   const navigate = useNavigate();
 
   // React Hook Form setup
@@ -38,9 +38,10 @@ function ConvertCv() {
   });
 
   const api = useApi();
+
   const onSubmit = async (data) => {
     const file = data.cv[0];
-    
+
     if (file) {
       const formData = new FormData();
       formData.append("file", file);
@@ -50,47 +51,41 @@ function ConvertCv() {
 
       try {
         const token = localStorage.getItem("token");
-        const response = await api.post("/upload", formData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        });
-  
-        if (response.status === 201) {
-          const { cv_path } = response.data;
-          const cv_path_data = new FormData();
-          cv_path_data.append('cv_path' ,  cv_path);
-
-          const res = await api.post("/convert", cv_path_data, {
+        
+        // Navigate to /loader immediately
+        navigate("/loader");
+        
+        // Send formData to the /convert endpoint
+        const convertResponse = await api.post("/convert", formData, {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "multipart/form-data",
             },
           });
 
-          if (res.status === 200){
+          // Check response status and navigate to /Validation
+          if (convertResponse.status === 200) {
+            const data = convertResponse.data;
+            const text = data.text;
+            localStorage.setItem('savedText', text);
+            
             navigate("/Validation");
-
-          }else{
-            const {error} =  res.data;
+            setTimeout(() => {
+              window.location.reload();
+          }, 0);
+          } else {
+            const { error } = convertResponse.data;
             console.log(error);
           }
 
-        } else {
-          console.error("File upload failed", response.statusText);
-        }
       } catch (error) {
         console.error("An error occurred:", error);
       }
+
     } else {
       console.error("No file selected");
     }
   };
-  
-  
-  
-  
 
   return (
     <div className="z-0 w-[40%] ml-[30%] mt-[10px]">

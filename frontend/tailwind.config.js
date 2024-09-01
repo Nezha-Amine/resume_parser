@@ -12,10 +12,13 @@ export default {
         "nts-text-green": "#9BBB59",
       },
       fontFamily: {
-        poppins: ["Poppins", "sans-serif"],
+        sans: ["Poppins", "sans-serif"],
         abadi: ["Abadi MT Std Bold"],
         verdana: ["Verdana", "sans-serif"],
+        serif: ["Times New Roman", "Times", "serif"], // This sets Times New Roman as the default serif font
       },
+      
+      
       boxShadow: {
         card: "0px 3px 4px 3px rgba(21,53,88,1)",
       },

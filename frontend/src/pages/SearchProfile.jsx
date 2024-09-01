@@ -3,6 +3,9 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as Yup from "yup";
 import add from "../assets/add.svg";
+import useApi from "../api";
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function SearchProfile() {
   const [skills, setSkills] = useState([]);
@@ -21,11 +24,40 @@ function SearchProfile() {
   } = useForm({
     resolver: yupResolver(validationSchema),
   });
+  const api = useApi();
+  const navigate = useNavigate();
 
-  const onSubmit = (data) => {
-    console.log("Form Data:", data);
-    // Handle form submission
+  const onSubmit = async (data) => {
+    const searchData = {
+      profile: data.profile,
+      skills: skills,
+    };
+    const token = localStorage.getItem("token");
+  
+    try {
+      // Send searchData to the /search endpoint
+      const searchResponse = await api.post("/search", searchData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      let res = []
+      if (searchResponse.data){
+        res  = searchResponse.data;
+      }else{
+        res = [];
+      }
+      localStorage.setItem('profil', data.profile);
+      localStorage.setItem('skills', skills);
+
+      navigate('/ResultSearch', { state: res });
+
+    } catch (error) {
+      console.error("Search failed:", error);
+    }
   };
+  
 
   const handleAddSkill = () => {
     if (inputValue.trim() && skills.length < 3) {

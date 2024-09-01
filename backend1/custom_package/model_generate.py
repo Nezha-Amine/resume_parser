@@ -36,7 +36,7 @@ class Generate():
             {{
                 "nom_prenom": "Nom complet de la personne",
                 "profil": "Titre du profil professionnel ou éducatif",
-                "work_summary": "Résumé détaillé du profil, incluant les expériences pertinentes (formulé à la troisième personne, sans utiliser le pronom 'je')",
+                "work_summary": "réaliser un résumé professionnel à partir du CV fourni en suivant le modèle suivant, qui contient les composants suivants : Titre professionnel, Domaines d'expertise, Compétences clés, Caractéristique principale, et Expérience.",
                 "education": [
                 {{
                     "annee": "Date de début - Date de fin (yyyy-yyyy)", 
@@ -73,7 +73,9 @@ class Generate():
                     "organisme": "Organisme de délivrance de la certification"
                 }}
                 ],
-                "annees_d_experience": "Nombre total d'années d'expérience professionnelle (en années)"
+                "annees_d_experience": "Nombre total d'années d'expérience professionnelle (en années)",
+                "mot_cles" : ["Veuillez extraire les mots-clés d'un CV afin de faciliter la recherche par les recruteurs. Concentrez-vous sur les compétences techniques, les technologies ou outils mentionnés, ainsi que les certifications importantes. Par exemple, identifiez des termes comme 'développeur', 'DevOps', 'Python', 'Docker', et 'AWS Certified'."]
+
             }}
 
             CV à nettoyer :

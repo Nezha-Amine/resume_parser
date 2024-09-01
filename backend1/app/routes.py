@@ -75,26 +75,9 @@ def register():
     user_model.create_user(email, password, role)
     return jsonify(message="User registered successfully"), 201
 
-@auth_bp.route('/upload', methods=['POST'])
-def upload_resume():
+def upload_resume(name,surname,profil,file_path , mot):
     
-    file = request.files.get('file')
-    if file is None or file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-
-    if not allowed_file(file.filename):
-        return jsonify({"error": "File type not allowed"}), 400
-
-    name = request.form.get('nom')
-    surname = request.form.get('prenom')
-    profil = request.form.get('profile')
- 
-    file_path = None
-    if file:
-        file_path = os.path.join('uploads', file.filename)
-        file.save(file_path)
-
-    cv_model.create_resume(name, surname, profil, file_path)
+    cv_model.create_resume(name, surname, profil, file_path, mot)
 
     return jsonify({"cv_path": file_path }), 201
 
@@ -108,11 +91,21 @@ def allowed_file(filename):
 @auth_bp.route('/convert', methods=['POST'])
 def convert_resume():
     try:
-
-        cv_path = request.form.get('cv_path')
         
-        if not cv_path:
-            return jsonify({"error": "No cv_path provided"}), 400
+
+        file_path = request.form.get('resume_path')
+        file = request.files.get('file')
+
+        if file is None or file.filename == '':
+            return jsonify({"error": "No selected file"}), 400
+
+        if not allowed_file(file.filename):
+            return jsonify({"error": "File type not allowed"}), 400
+        file_path = None
+        if file:
+            file_path = os.path.join('uploads', file.filename)
+            file.save(file_path)
+
         
         # Initialize SparkSession
         spark = SparkSession.builder \
@@ -121,7 +114,7 @@ def convert_resume():
             .getOrCreate()
         
         # Read binary file data
-        cv_df = spark.read.format("binaryFile").option("pathGlobFilter", "*.*").load(cv_path)
+        cv_df = spark.read.format("binaryFile").option("pathGlobFilter", "*.*").load(file_path)
         cv_pandas = cv_df.select("path").toPandas()
         cv_pandas['path'] = cv_pandas['path'].str.replace(r'^file:/', '', regex=True)
         
@@ -134,6 +127,11 @@ def convert_resume():
         columns_to_check = ['path', 'text']
         mask = ~transformed_df[columns_to_check].apply(lambda x: x.eq('NaN')).any(axis=1)
         final_df_cleaned = transformed_df[mask]
+
+        # text to save in localStorage 
+        text = final_df_cleaned['text'].iloc[0]
+        
+
         final_df_cleaned = final_df_cleaned.drop(['path_of_image', 'predictions', 'text'], axis=1)
         final_df_cleaned['name'] = final_df_cleaned['path'].apply(
             lambda path: os.path.splitext(os.path.basename(path))[0]
@@ -145,10 +143,64 @@ def convert_resume():
         json_res_column.to_json('jsonData.json', orient = 'split', compression = 'infer', index = 'true')
         
 
+        json_string = final_df_cleaned['json_res'].iloc[0]
+        json_object = json.loads(json_string)
+
+        # Data to store
+        name = request.form.get('nom')
+        surname = request.form.get('prenom')
+        profil = request.form.get('profile')
+
+        mot_cles = json_object.get('mot_cles', [])
+        if not isinstance(mot_cles, list):
+            mot_cles = [mot_cles]
+
+        skills = json_object.get('competences', [])
+        if not isinstance(skills, list):
+            skills = [skills]
+        
+        combined_list = mot_cles + skills
+
+
+
+        upload_resume(name,surname,profil,file_path,combined_list)
+        
+
         shutil.rmtree('../assets')
         shutil.rmtree('tmp_folder')
 
-        return jsonify({"message":  "done" }), 200
+        return jsonify({'text': text}), 200
     
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@auth_bp.route('/search', methods=['POST'])
+def search_resume():
+
+    try :
+        data = request.json
+        search_profil = data.get("profile")
+        skills = data.get("skills", [])
+        results  = cv_model.select_resume(search_profil,skills)
+
+
+        return jsonify({"res":  results }), 200
+    
+    except Exception as e: 
+        return jsonify({"error": str(e)}), 500
+    
+@auth_bp.route('/regenerate', methods=['POST'])
+def regenerate_resume():
+
+    try :
+        data = request.json
+        text = data.get("text")
+
+        
+        
+
+
+        return jsonify({"res":  "done" }), 200
+    
+    except Exception as e: 
         return jsonify({"error": str(e)}), 500

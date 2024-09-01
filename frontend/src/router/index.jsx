@@ -6,7 +6,8 @@ import AdminLayout from "../layouts/AdminLayout";
 import SearchProfile from "../pages/SearchProfile";
 import ConvertCv from "../pages/ConvertCv";
 import ResumeBuilder from "../components/ResumeBuilder";
-
+import LoaderPage from "../components/LoaderPage";
+import ResultSearch from "../pages/ResultSearch";
 export const router = createBrowserRouter([
   {
     element: (
@@ -18,9 +19,13 @@ export const router = createBrowserRouter([
       { path: "/chercherProfile", element: <SearchProfile /> },
       { path: "/convertirCv", element: <ConvertCv /> },
       { path: "/Validation", element: <ResumeBuilder /> },
+      { path: "/ResultSearch", element: <ResultSearch /> },
     ],
   },
-
+  {
+    path: "/loader",
+    element: <LoaderPage />,
+  },
   // public routes
   {
     path: "/",
