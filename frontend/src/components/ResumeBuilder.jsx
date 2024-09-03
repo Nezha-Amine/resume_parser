@@ -1,12 +1,18 @@
 import React, { useState } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
-import jsonData from "../../../backend1/jsonData.json";
+import jsonData from "../../../backend/jsonData.json";
 import plusIcon from "../assets/plusIcon.svg";
 import minusIcon from "../assets/minusIcon.svg";
 import cache from "../assets/cache.png";
 import logoNetsense from "../assets/logoNetsense.png";
+import logolink4u from "../assets/link4u.png" ;
 import html2pdf from "html2pdf.js";
+import { FaRedo } from "react-icons/fa";
+import useApi from "../api";
+import { useNavigate } from "react-router-dom";
+import  { useRef } from "react";
+import { useReactToPrint } from 'react-to-print';
 
 const ResumeBuilder = () => {
   let jsonString = jsonData.data;
@@ -21,7 +27,7 @@ const ResumeBuilder = () => {
   const competencesData = Array.isArray(Data.competences) ? Data.competences : [];
   const languesData = Array.isArray(Data.langues) ? Data.langues : [];
   const certificationsData = Array.isArray(Data.certifications) ? Data.certifications : [];
-
+  console.log(projetsData);
   // Convert taches and technologies to arrays if they aren't already
   projetsData.forEach((projet) => {
     projet.taches = Array.isArray(projet.taches) ? projet.taches : [];
@@ -42,6 +48,8 @@ const ResumeBuilder = () => {
   const [langues, setLangues] = useState(languesData);
   const [certifications, setCertifications] = useState(certificationsData);
   const [tasks, setTasks] = useState('');
+  
+  const format = localStorage.getItem("format");
 
   const handlePersonalInfoChange = (e) => {
     const { id, value } = e.target;
@@ -145,19 +153,112 @@ const ResumeBuilder = () => {
     setCompetences(competences.slice(0, -1));
   };
 
+  const componentRef = useRef();
+  
   const handleDownloadPdf = () => {
-    const rightSideContent = document.getElementById("pdfContent");
-
-    const opt = {
-      margin: 0,
+    const pdfOptions = {
+      margin: [0, 0, 40, 0],
       filename: "resume.pdf",
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 3, useCORS: true },
-      jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
+      image: { type: "jpeg", quality: 1 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     };
+    
+    // Generate PDF from the HTML element
+    html2pdf().from(componentRef.current).set(pdfOptions).save();
+    };
+  
+  
 
-    // Use html2pdf to generate the PDF
-    html2pdf().from(rightSideContent).set(opt).save();
+ 
+
+
+  const handleCertificationChange = (index, field, value) => {
+    const newCertifications = [...certifications];
+    newCertifications[index][field] = value;
+    setCertifications(newCertifications);
+  };
+  const addCertificationRow = () => {
+    setCertifications([
+      ...certifications,
+      { nom: "", date: "", score: "", organisme: "" },
+    ]);
+  };
+
+  const removeCertificationRow = () => {
+    setCertifications(certifications.slice(0, -1));
+  };
+
+  const addLangueRow = () => {
+    setLangues([...langues, ""]); // Add an empty string to create a new row
+  };
+
+  const removeLangueRow = () => {
+    setLangues(langues.slice(0, -1));
+  };
+  const handleLanguesChange = (index, value) => {
+    const newLangue = [...langues];
+    newLangue[index] = value;
+    setLangues(newLangue);
+  };
+
+  
+  
+  // const handleAlert = () => {
+  //   alert("Please save the pdf in the path: C:\\Users\\hp\\resume_parser1\\backend1\\cv_convertits");
+  // };
+  // const handleDownloadPdf = () => {
+  //   // const rightSideContent = document.getElementById("pdfContent");
+
+  //   // const opt = {
+  //   //   margin: 0,
+  //   //   filename: "resume.pdf",
+  //   //   image: { type: "jpeg", quality: 0.98 },
+  //   //   html2canvas: { scale: 3, useCORS: true },
+  //   //   jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
+  //   // };
+
+  //   // // Use html2pdf to generate the PDF
+  //   // html2pdf().from(rightSideContent).set(opt).save();
+    
+   
+  // };
+  const api = useApi();
+  const navigate = useNavigate();
+
+  const handleRefresh = async() => {
+    try {
+      const token = localStorage.getItem("token");
+      const text = localStorage.getItem('savedText');
+      const formData = {
+        text: text,
+      };
+      navigate("/loader");
+      
+      // Send formData to the /convert endpoint
+      const convertResponse = await api.post("/regenerate", formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+      });
+
+        // Check response status and navigate to /Validation
+        if (convertResponse.status === 200) {
+          
+            navigate("/Validation");
+              setTimeout(() => {
+                window.location.reload();
+            }, 0);
+        } else {
+          const { error } = convertResponse.data;
+          console.log(error);
+        }
+
+    } catch (error) {
+      console.error("An error occurred:", error);
+    }
+
   };
 
   return (
@@ -165,6 +266,14 @@ const ResumeBuilder = () => {
       <div className="flex ml-24 h-full">
         {/* Left side - Form Inputs */}
         <div className="h-full w-[35%] overflow-y-auto p-5 bg-nts-dark-green mt-10 rounded-md pb-14 ">
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={handleRefresh}
+              className="text-white hover:text-gray-300 transition duration-300"
+            >
+              <FaRedo size={24} />
+            </button>
+          </div>
           {/* Personal Information */}
           <div className="personal-info mb-6">
             <h2 className="text-white text-2xl font-semibold mb-4">
@@ -386,51 +495,52 @@ const ResumeBuilder = () => {
                     }
                     placeholder="Tâches"
                     className="w-full p-2 bg-white text-black border-2 border-white focus:outline-none focus:border-white rounded h-24"
-                />
-                {/* Add technologies section */}
-                <div className="mb-4">
-                  {/* <h3 className="text-white text-xl font-semibold mb-2">
-                    Technologies
-                  </h3> */}
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {(Array.isArray(projet.technologies)
-                      ? projet.technologies
-                      : projet.technologies.split(",")
-                    ).map((tech, techIndex) => (
-                      <div
-                        key={techIndex}
-                        className="flex items-center bg-nts-black rounded-full px-4 py-2 text-sm text-white"
-                      >
-                        {tech.trim()}
-                        <span
-                          className="ml-2 text-red-500 cursor-pointer"
-                          onClick={() => removeTechnology(index, techIndex)}
-                        >
-                          ×
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  />
 
-                  {/* Input for adding new technologies */}
-                  <div className="flex items-center mb-5">
-                    <input
-                      type="text"
-                      placeholder="Add technology"
-                      className="p-2 bg-white text-black border-2 border-white rounded"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addTechnology(index, e.target.value);
-                          e.target.value = "";
-                        }
-                      }}
-                    />
+                  {/* Add technologies section */}
+                  <div className="mb-4">
+                    <h3 className="text-white text-xl font-semibold mb-2">
+                      Technologies
+                    </h3>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {(Array.isArray(projet.technologies)
+                        ? projet.technologies
+                        : projet.technologies.split(",")
+                      ).map((tech, techIndex) => (
+                        <div
+                          key={techIndex}
+                          className="flex items-center bg-nts-black rounded-full px-4 py-2 text-sm text-white"
+                        >
+                          {tech.trim()}
+                          <span
+                            className="ml-2 text-red-500 cursor-pointer"
+                            onClick={() => removeTechnology(index, techIndex)}
+                          >
+                            ×
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Input for adding new technologies */}
+                    <div className="flex items-center mb-4">
+                      <input
+                        type="text"
+                        placeholder="Add technology"
+                        className="p-2 bg-white text-black border-2 border-white rounded"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addTechnology(index, e.target.value);
+                            e.target.value = "";
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-              
+              ))}
+
               <div className="flex">
                 <img
                   src={plusIcon}
@@ -447,22 +557,150 @@ const ResumeBuilder = () => {
               </div>
             </div>
           )}
+
+          {/* Certifications */}
+          {certifications.length > 0 && (
+            <div className="certifications mb-6">
+              <h2 className="text-white text-2xl font-semibold mb-4">
+                Certifications
+              </h2>
+              {certifications.map((cert, index) => (
+                <div key={index} className="certification-row mb-4">
+                  <input
+                    type="text"
+                    value={cert.nom}
+                    onChange={(e) =>
+                      handleCertificationChange(index, "nom", e.target.value)
+                    }
+                    placeholder="Nom de la certification"
+                    className="w-full p-2 mb-2 bg-white text-black border-2 border-white focus:outline-none focus:border-white rounded"
+                  />
+                  <input
+                    type="text"
+                    value={cert.date}
+                    onChange={(e) =>
+                      handleCertificationChange(index, "date", e.target.value)
+                    }
+                    placeholder="Date d'obtention (format dd/mm/yyyy ou mm/yyyy)"
+                    className="w-full p-2 mb-2 bg-white text-black border-2 border-white focus:outline-none focus:border-white rounded"
+                  />
+                  <input
+                    type="text"
+                    value={cert.score}
+                    onChange={(e) =>
+                      handleCertificationChange(index, "score", e.target.value)
+                    }
+                    placeholder="Score obtenu (si applicable)"
+                    className="w-full p-2 mb-2 bg-white text-black border-2 border-white focus:outline-none focus:border-white rounded"
+                  />
+                  <input
+                    type="text"
+                    value={cert.organisme}
+                    onChange={(e) =>
+                      handleCertificationChange(
+                        index,
+                        "organisme",
+                        e.target.value
+                      )
+                    }
+                    placeholder="Organisme de délivrance"
+                    className="w-full p-2 bg-white text-black border-2 border-white focus:outline-none focus:border-white rounded"
+                  />
+                </div>
+              ))}
+              <div className="flex">
+                <img
+                  src={plusIcon}
+                  alt="add"
+                  className="w-10"
+                  onClick={addCertificationRow}
+                />
+                <img
+                  src={minusIcon}
+                  alt="minus"
+                  className="w-10 ml-4"
+                  onClick={removeCertificationRow}
+                />
+              </div>
+            </div>
+          )}
+
+
+          {/* Langues */}
+          <div className=" mb-6">
+            <h2 className="text-white text-2xl font-semibold mb-4">Langues</h2>
+            {langues.map((lg, index) => (
+              <div key={index} className="mb-4">
+                <input
+                  type="text"
+                  value={lg}
+                  onChange={(e) => handleLanguesChange(index, e.target.value)}
+                  placeholder="Langue"
+                  className="w-full p-2 bg-white text-black border-2 border-white focus:outline-none focus:border-white rounded"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex">
+            <img
+              src={plusIcon}
+              alt="add"
+              className="w-10"
+              onClick={addLangueRow}
+            />
+            <img
+              src={minusIcon}
+              alt="minus"
+              className="w-10 ml-4"
+              onClick={removeLangueRow}
+            />
+          </div>
         </div>
 
         {/* Right side - PDF Content */}
-        <div className="pdf-content w-[65%] py-10 px-0 overflow-y-auto h-full bg-nts-light-green">
+        <div className="pdf-content w-[65%] py-10 px-0 overflow-y-auto h-full bg-nts-light-green " ref={componentRef}   style={{ width: '100%' , fontFamily :"Times New Roman" }}
+        >
+           <style>
+              {`
+              @media print {
+
+                @page {
+                  margin-top : 70px;
+                  margin-bottom : 20px ;
+                }
+                @page :first {
+                  margin-top: 0px !important;
+                }
+                .download{
+                  display : None;
+                }
+              } 
+              
+              `}
+              
+            </style>
           <div id="pdfContent">
        {/* Personal Info Display */}
        <div className="flex justify-between items-center mx-10 mt-[-20px]">
               <img src={cache} alt="cache" className="w-32" />
+            
+
+              {format === 'Netsense' ? (
+                <img
+                  src={logoNetsense}
+                  alt="logoNetsense"
+                  className="w-40 h-16"
+                />
+              ) : 
               <img
-                src={logoNetsense}
-                alt="logoNetsense"
-                className="w-40 h-16"
-              />
+                  src={logolink4u}
+                  alt="logoNetsense"
+                  className="w-40 h-16"
+                />
+                }
             </div>
             <div className="text-center mb-8">
-              <h1 className="font-bold text-2xl mb-1">{personalInfo.name}</h1>
+              <h1 className="font-bold text-2xl mb-1 text-black">{personalInfo.name}</h1>
             </div>
 
             {/* Job Title Container */}
@@ -488,16 +726,17 @@ const ResumeBuilder = () => {
               </div>
 
               {/* Formation */}
-              <div className="mt-8">
+              <div className="mt-6 text-justify">
                 <h3 className="text-nts-text-green font-bold text-xl mb-4">
                   Formation :
                 </h3>
                 {education.map((edu, index) => (
                   <div key={index} className="mb-4 inline text-justify">
-                    <p className="text-gray-700">
-                      <span className="font-semibold text-gray-900">
+                    <strong className="
+                       text-gray-900">
                         {edu.annee} : 
-                      </span>
+                      </strong>
+                    <p className="text-gray-700">
                        {edu.diplome} : {edu.etablissement}
                     </p>
                   </div>
@@ -506,7 +745,8 @@ const ResumeBuilder = () => {
               </div>
 
               {/* Expérience Professionnelle */}
-              <div className="mt-8">
+              {experience.length > 0 && (
+              <div className="mt-6">
                 <h3 className="text-nts-text-green font-bold text-xl mb-4">
                   Expérience Professionnelle :
                 </h3>
@@ -524,9 +764,9 @@ const ResumeBuilder = () => {
                   </div>
                 ))}
               </div>
-
+              )}
               {/* Compétences */}
-              <div className="mt-8">
+              <div className="mt-6">
                 <h3 className="text-nts-text-green font-bold text-xl mb-4">
                   Compétences :
                 </h3>
@@ -538,41 +778,76 @@ const ResumeBuilder = () => {
               </div>
              
                {/* Projets */}
-            {projets.length > 0 && (
-              <div className="projets mt-8 text-justify">
-                <h2 className="text-nts-text-green font-bold text-xl mb-4">Projets</h2>
-                {projets.map((projet, index) => (
-                  <div key={index} className="projet-item mb-4">
-                    <h3 className="text-lg font-semibold text-black">
-                      {projet.titre_projet}
-                    </h3> 
-                    {projet.taches.length > 0 && (
-                    <ul className="list-disc list-inside ">
-                   
-                      <li  className="text-gray-700">
-                        {projet.taches.join(", ")}
-                      </li>
-      
-                    </ul>    
-                    ) }  {projet.technologies.length > 0 && (
-                  <div>
-                <span className="text-gray-700 font-semibold mr-2 text-[16px]">Technologies:</span>
-                <span className="text-gray-700  ">
-                  {projet.technologies.join(", ")}
-                </span>
-            </div>
-          )}
-
-
-
-                  </div>
-                  
-                   
-                ))}
-              </div>
-            )} {/* Langues */}
+               {projets.length > 0 && (
+                <div className="projets mt-6 no-page-break">
+                  <h2 className="text-nts-text-green font-bold text-xl mb-4">
+                    Projets
+                  </h2>
+                  {projets.map((projet, index) => (
+                    <div key={index} className="projet-item mb-4">
+                      <h3 className="text-lg font-semibold text-black">
+                        {projet.titre_projet} : 
+                      </h3>
+                      {projet.taches.length > 0 && (
+                        <ul className="list-disc list-inside ml-4 mt-2 text-gray-800">
+                          {projet.taches.map((task, i) => (
+                            <li key={i}>{task}</li>
+                          ))}
+                        </ul>
+                      )}{" "}
+                      {projet.technologies.length > 0 && (
+                        <div>
+                          <span className="text-gray-700 font-semibold mr-2  text-[16px]">
+                            Technologies:
+                          </span>
+                          <span className="text-gray-700  ">
+                            {projet.technologies.join(", ")}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}{" "} 
+            {/* Certifications */}
+            {certifications.length > 0 && (
+                <div className="projets mt-6 no-page-break">
+                  <h2 className="text-nts-text-green font-bold text-xl mb-4">
+                    Certificats
+                  </h2>
+                  {certifications.map((certif, index) => (
+                    <div key={index} className="projet-item mb-4">
+                      <h4 className="font-semibold text-gray-900">
+                        {certif.nom}
+                      </h4>
+                      <span className="text-gray-700">
+                        {certif.organisme} 
+                            
+                            {certif.date && (
+                       
+                       <span>- {certif.date}</span> 
+                      
+                      )}   
+                          
+                        
+                      </span>
+                      {certif.score && (
+                        <div className=" text-gray-700">
+                          <span className=" font-semibold mr-2  text-[16px]">
+                            Score:{" "}
+                          </span>
+                          <span>{certif.score}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            
+            
+            {/* Langues */}
  {langues.length > 0 && (
-              <div className="langues mt-8 text-justify">
+              <div className="langues mt-6 text-justify">
                 <h2 className="text-nts-text-green font-bold text-xl mb-4 ">Langues</h2>
                 {langues.map((langue, index) => (
                   <p key={index} className="langue-item text-gray-700">
@@ -589,9 +864,12 @@ const ResumeBuilder = () => {
            
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end download">
             <button
-              onClick={handleDownloadPdf}
+              onClick={() => {
+                handleDownloadPdf();
+              }}
+
               className="bg-nts-dark-green text-white p-4 mt-10 rounded shadow-md hover:bg-nts-dark-green-dark"
             >
               Télécharger le PDF

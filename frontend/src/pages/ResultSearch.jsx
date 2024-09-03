@@ -2,6 +2,7 @@ import ChevronDown from "../assets/ChevronDown.png";
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import useApi from "../api";
+import { useNavigate } from "react-router-dom";
 
 
 const ResultSearch = () => {
@@ -28,6 +29,7 @@ const ResultSearch = () => {
         last_name: profile.last_name,
         profile: profile.profil, 
         mot_cles: profile.mot_cles,
+        path : profile.resume_path,
         resume_convertit: profile.resume_convertit || ''  
     })); 
   }
@@ -44,7 +46,7 @@ const ResultSearch = () => {
 
     
     const api = useApi();
-
+    const navigate = useNavigate();
     const SearchProfile = async () => {
         const profile = localStorage.getItem('profil');
         const searchData = {
@@ -87,6 +89,70 @@ const ResultSearch = () => {
           console.error("Search failed:", error);
         }
       };
+
+    const handleConvertCv = async (data) => {
+      while (true) {
+        let userValue = prompt('Choisissez le format Netsense or Link4U:');
+        if (userValue === "Netsense" || userValue === "Link4U") {
+          localStorage.setItem("format", userValue);
+          break; 
+        } else {
+          alert('Format invalide. Veuillez entrer "Netsense" ou "Link4U".'); 
+        }
+      }
+      const formData = new FormData();
+      formData.append("file", data);
+
+      try {
+        const token = localStorage.getItem("token");
+        
+        // Navigate to /loader immediately
+        navigate("/loader");
+        
+        // Send formData to the /convert endpoint
+        const convertResponse = await api.post("/convert", formData, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
+          });
+
+          // Check response status and navigate to /Validation
+          if (convertResponse.status === 200) {
+            const data = convertResponse.data;
+            const text = data.text;
+            localStorage.setItem('savedText', text);
+            
+            navigate("/Validation");
+            setTimeout(() => {
+              window.location.reload();
+          }, 0);
+          } else {
+            const { error } = convertResponse.data;
+            console.log(error);
+          }
+
+      } catch (error) {
+        console.error("An error occurred:", error);
+      }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    }
     const downloadCv = (fileUrl) => {
     if (fileUrl) {
         const link = document.createElement('a');
@@ -132,6 +198,9 @@ const ResultSearch = () => {
       }
     };
   
+  // const handleClickVoir = (path) => {
+  //   window.open(`http://localhost:5000/${path}`, '_blank');
+  // };
 
   const handleCvsDropDown = (index) => {
     setActiveDropdownIndex((prevIndex) => (prevIndex === index ? null : index));
@@ -205,7 +274,7 @@ const ResultSearch = () => {
   const displayedProfiles = filteredProfiles.slice(currentPage * rowsPerPage, (currentPage + 1) * rowsPerPage);
 
   return (
-<div className="z-0 ms-[10%] w-[80%] ml-[10%] mt-[10px]">      {/* Skill input and selection */}
+<div className="z-0 ms-[15%] w-[70%] ml-[15%] mt-[10px]">      {/* Skill input and selection */}
       <div className="flex items-center justify-end space-x-4 mt-6 mr-5">
         <input
           type="text"
@@ -317,33 +386,40 @@ const ResultSearch = () => {
                 <h2 className="text-lg font-bold">{item.first_name} {item.last_name}</h2>
                 <p className="mt-2 text-sm text-gray-700">{item.profile}</p>
                 <p className="mt-2 text-sm text-gray-500">
+                  <strong>Skills : </strong> 
                     {item.mot_cles.slice(0, Math.min(item.mot_cles.length, 6)).map((mot_cle, idx) => (
-                        <span key={idx} className="mr-2">#{mot_cle}</span>
+                        <span key={idx} className="mr-3 text-nts-green">#{mot_cle}</span>
                     ))}
                 </p>
             </div>
-            <div className="mt-4 flex space-x-4 justify-center">
+            <div className="mt-4 space-x-4 justify-center">
                 {item.resume_convertit ? (
-                    <div className="relative">
-                        <button className="bg-black text-white px-3  rounded-md">
-                            Voir
+                    <div className="relative flex  flex-row flex-wrap" ref={(el) => dropdownRefs.current[index] = el}>
+                        <a
+                          className="bg-black text-white px-4 py-1 rounded-md"
+                          href={`http://localhost:5000/${item.path}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Voir{" "}
+                        </a>
+
+                        <button className="bg-nts-green text-white px-4 py-1 rounded-md ml-2"
+                            onClick={() => handleCvsDropDown(index)}>
+                            <span>Télécharger</span>
+                            <span
+                            className="text-black bg-[#D9D9D9] ml-2 mb-1 font-medium rounded-lg text-lg px-1 py-1 text-center inline-flex items-center"
+                                >
+                                  
+                             <img src={ChevronDown} className="h-2 w-3 fill-[#D9D9D9]" alt="Chevron Down" />
+                            </span>
                         </button>
-                        <button className="bg-nts-green text-white px-3  rounded-md ml-2">
-                            Télécharger CV
-                        </button>
-                        <div className="relative" ref={(el) => dropdownRefs.current[index] = el}>
-                            <button
-                                className="text-black bg-[#D9D9D9] hover:bg-nts-grey font-medium rounded-lg text-lg px-5 py-2.5 text-center inline-flex items-center"
-                                onClick={() => handleCvsDropDown(index)}
-                            >
-                                <img src={ChevronDown} className="ml-4 h-2 w-3" alt="Chevron Down" />
-                            </button>
-                            <div
-                                className={`z-10 mt-2 ml-2 bg-white rounded divide-y divide-gray-100 shadow absolute ${
+                        <div
+                                className={`z-10  mt-2 ml-2 bg-white rounded divide-y divide-gray-100 right-0 top-[100%] mr-10 shadow absolute ${
                                     activeDropdownIndex === index ? "block" : "hidden"
                                 }`}
                             >
-                                <ul className="z-10 w-20 bg-white rounded divide-y divide-gray-100 shadow mt-2 overflow-auto">
+                                <ul className="z-10 w-20 bg-white rounded divide-y divide-gray-100 shadow  overflow-auto">
                                     <li>
                                         <button className="block py-2 px-4 hover:bg-gray-100 w-20">
                                             Word
@@ -355,13 +431,27 @@ const ResultSearch = () => {
                                         </button>
                                     </li>
                                 </ul>
-                            </div>
                         </div>
                     </div>
                 ) : (
                     <>
-                        <button className="bg-black text-white px-4 py-2 rounded-md">Voir</button>
-                        <button className="bg-nts-green text-white px-4 py-2 rounded-md">Convertir CV</button>
+                        
+                        <a
+                          className="bg-black text-white px-4 py-1 rounded-md"
+                          href={`http://localhost:5000/${item.path}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Voir{" "}
+                        </a>
+
+
+                        <button className="bg-nts-green text-white px-4 py-1  rounded-md"
+                          onClick={() => handleConvertCv(item.path)
+                          }
+
+                        >
+                        Convertir CV</button>
                     </>
                 )}
             </div>

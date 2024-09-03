@@ -48,6 +48,12 @@ function ConvertCv() {
       formData.append("nom", data.nom);
       formData.append("prenom", data.prenom);
       formData.append("profile", data.profile);
+      localStorage.setItem("format", data.format);
+
+
+      localStorage.setItem('nom' , data.nom);
+      localStorage.setItem('prenom',data.prenom);
+      localStorage.setItem('profile_to_save', data.profile);
 
       try {
         const token = localStorage.getItem("token");
@@ -68,7 +74,9 @@ function ConvertCv() {
             const data = convertResponse.data;
             const text = data.text;
             localStorage.setItem('savedText', text);
-            
+            localStorage.setItem('mots_cles_mongo' , data.combined_list);
+            localStorage.setItem('file_path' , data.file_path);
+
             navigate("/Validation");
             setTimeout(() => {
               window.location.reload();
@@ -95,17 +103,18 @@ function ConvertCv() {
         </h1>
       </div>
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="bg-card-fill rounded-3xl px-10 pt-6 flex flex-col my-2 bg-[#EBEBEB] shadow-[rgba(0,_0,_0,_0.24)_0px_3px_8px] border-table-border mt-8">
-          <div className="flex flex-col mb-4">
-            <div className="flex items-center justify-center mb-4">
+        <div className="bg-card-fill rounded-3xl px-6 sm:px-10 pt-6 flex flex-col my-2 bg-[#EBEBEB] shadow-[rgba(0,_0,_0,_0.24)_0px_3px_8px] border-table-border mt-8">
+          <div className="flex flex-col gap-4">
+
+            <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
               <label
-                className="block tracking-wide text-nts-black text-[15px] font-[600] mr-4"
+                className="block text-nts-black text-[15px] font-[600] w-full sm:w-1/3"
                 htmlFor="nom"
               >
                 Nom
               </label>
               <input
-                className="ml-16 appearance-none w-full bg-grey-lighter text-grey-darker border border-table-border rounded-xl py-3 px-4 shadow-[0px_4px_0px_0px_#00000025]"
+                className="w-full sm:w-2/3 appearance-none bg-grey-lighter text-grey-darker border border-table-border rounded-xl py-3 px-4 shadow-[0px_4px_0px_0px_#00000025]"
                 id="nom"
                 placeholder="Nom"
                 {...register("nom")}
@@ -117,15 +126,15 @@ function ConvertCv() {
               </p>
             )}
 
-            <div className="flex items-center justify-center mb-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
               <label
-                className="block tracking-wide text-nts-black text-[15px] font-[600] mr-4"
+                className="block text-nts-black text-[15px] font-[600] w-full sm:w-1/3"
                 htmlFor="prenom"
               >
                 Prénom
               </label>
               <input
-                className="ml-12 appearance-none w-full bg-grey-lighter text-grey-darker border border-table-border rounded-xl py-3 px-4 shadow-[0px_4px_0px_0px_#00000025]"
+                className="w-full sm:w-2/3 appearance-none bg-grey-lighter text-grey-darker border border-table-border rounded-xl py-3 px-4 shadow-[0px_4px_0px_0px_#00000025]"
                 id="prenom"
                 placeholder="Prénom"
                 {...register("prenom")}
@@ -137,15 +146,15 @@ function ConvertCv() {
               </p>
             )}
 
-            <div className="flex items-center justify-center mb-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
               <label
-                className="block tracking-wide text-nts-black text-[15px] font-[600] mr-4"
+                className="block text-nts-black text-[15px] font-[600] w-full sm:w-1/3"
                 htmlFor="profile"
               >
                 Profile
               </label>
               <input
-                className="ml-14 appearance-none w-full bg-grey-lighter text-grey-darker border border-table-border rounded-xl py-3 px-4 shadow-[0px_4px_0px_0px_#00000025]"
+                className="w-full sm:w-2/3 appearance-none bg-grey-lighter text-grey-darker border border-table-border rounded-xl py-3 px-4 shadow-[0px_4px_0px_0px_#00000025]"
                 id="profile"
                 placeholder="Profile"
                 {...register("profile")}
@@ -157,16 +166,39 @@ function ConvertCv() {
               </p>
             )}
 
-            <div className="flex items-center justify-center mb-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
               <label
-                className="block tracking-wide text-nts-black text-[15px] font-[600]  "
+                className="block text-nts-black text-[15px] font-[600] w-full sm:w-1/3"
+                htmlFor="format"
+              >
+                Format
+              </label>
+              <select
+                className="w-full sm:w-2/3 appearance-none bg-grey-lighter text-grey-darker border border-table-border rounded-xl py-3 px-4 shadow-[0px_4px_0px_0px_#00000025]"
+                id="format"
+                {...register("format")}
+              >
+                <option value="" disabled selected>Select Format</option>
+                <option value="link4u">Link4U</option>
+                <option value="netsene">Netsene</option>
+              </select>
+            </div>
+            {errors.format && (
+              <p className="text-red-500 text-[13px] font-bold italic text-center mb-4">
+                {errors.format.message}
+              </p>
+            )}
+
+            <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
+              <label
+                className="block text-nts-black text-[15px] font-[600] w-full sm:w-1/3"
                 htmlFor="cv"
               >
                 Télécharger CV
               </label>
               <input
                 type="file"
-                className="ml-10 appearance-none w-full  text-grey-darker border border-table-border "
+                className="w-full sm:w-2/3 appearance-none text-grey-darker border border-table-border"
                 id="cv"
                 {...register("cv")}
               />
@@ -176,11 +208,12 @@ function ConvertCv() {
                 {errors.cv.message}
               </p>
             )}
+
           </div>
 
           <div className="flex justify-center mt-16 mb-10">
             <button
-              className="text-white bg-nts-dark-green mb-4 px-6 py-3 mt-4 rounded-lg"
+              className="text-white bg-nts-dark-green px-6 py-3 rounded-lg"
               type="submit"
             >
               Convertir
@@ -188,6 +221,9 @@ function ConvertCv() {
           </div>
         </div>
       </form>
+
+
+
     </div>
   );
 }
