@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import useApi from "../api";
 import { useNavigate } from "react-router-dom";
+import ConvertCv from "./upload";
 
 
 const ResultSearch = () => {
@@ -25,12 +26,13 @@ const ResultSearch = () => {
   if (data){
     const array = JSON.parse(data[0]);
     transformedProfiles = array.map(profile => ({
+        id : profile._id ,
         first_name: profile.first_name,
         last_name: profile.last_name,
         profile: profile.profil, 
         mot_cles: profile.mot_cles,
         path : profile.resume_path,
-        resume_convertit: profile.resume_convertit || ''  
+        resume_convertit: profile.resume_convertit_pdf || ''  
     })); 
   }
     let [profile, setProfile] = useState(transformedProfiles);
@@ -74,11 +76,13 @@ const ResultSearch = () => {
             const results = typeof res.res === 'string' ? JSON.parse(res.res) : res.res;
 
             const transformedProfiles = results.map(result => ({
+                id : result._id ,
                 first_name: result.first_name,
                 last_name: result.last_name,
                 profile: result.profil,
                 mot_cles: result.mot_cles,
-                resume_convertit: result.resume_convertit || '' 
+                path : result.resume_path,
+                resume_convertit: result.resume_convertit_pdf || '' 
             }));
 
             setProfile(transformedProfiles); 
@@ -90,30 +94,32 @@ const ResultSearch = () => {
         }
       };
 
-    const handleConvertCv = async (data) => {
+    const handleConvertCv = async (data , id) => {
       while (true) {
-        let userValue = prompt('Choisissez le format Netsense or Link4U:');
-        if (userValue === "Netsense" || userValue === "Link4U") {
+        let userValue = prompt('Choisissez le format netsense or link4U:');
+        if (userValue === "netsense" || userValue === "link4U") {
           localStorage.setItem("format", userValue);
           break; 
         } else {
           alert('Format invalide. Veuillez entrer "Netsense" ou "Link4U".'); 
         }
       }
-      const formData = new FormData();
-      formData.append("file", data);
+      const Data = {
+        cv : data,
+      };
 
       try {
         const token = localStorage.getItem("token");
         
-        // Navigate to /loader immediately
+        localStorage.setItem("file_path" , data) ;
+        localStorage.setItem("id", id.$oid );
         navigate("/loader");
         
         // Send formData to the /convert endpoint
-        const convertResponse = await api.post("/convert", formData, {
+        const convertResponse = await api.post("/convert", Data, {
             headers: {
               Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
+              "Content-Type": "application/json",
             },
           });
 
@@ -135,36 +141,7 @@ const ResultSearch = () => {
       } catch (error) {
         console.error("An error occurred:", error);
       }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     }
-    const downloadCv = (fileUrl) => {
-    if (fileUrl) {
-        const link = document.createElement('a');
-        link.href = fileUrl;
-        link.download = fileUrl.split('/').pop(); // Extract filename from URL
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    } else {
-        alert('CV file not available');
-    }
-    };
 
     // Handle "Afficher tout les cvs" toggle
     const handleShowAllSelect = (option) => {
@@ -198,15 +175,32 @@ const ResultSearch = () => {
       }
     };
   
-  // const handleClickVoir = (path) => {
-  //   window.open(`http://localhost:5000/${path}`, '_blank');
-  // };
+
 
   const handleCvsDropDown = (index) => {
     setActiveDropdownIndex((prevIndex) => (prevIndex === index ? null : index));
     setisOpen(false);       // Close the other dropdowns when this one is opened
     setOtherOpen(false)
   };
+
+  const ConvertToWord = async (path) =>{
+    const formData = {"file" : path}
+
+    try {
+      const token = localStorage.getItem("token");
+      
+      // Send formData to the /convert endpoint
+      const convertResponse = await api.post("/converttoword", formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+    } catch (error) {
+      console.error("An error occurred:", error);
+    }
+  }
 
   const handleAddSkill = (e) => {
     if (e.key === 'Enter' && e.target.value.trim() && mot_cles.length < 3) {
@@ -388,7 +382,7 @@ const ResultSearch = () => {
                 <p className="mt-2 text-sm text-gray-500">
                   <strong>Skills : </strong> 
                     {item.mot_cles.slice(0, Math.min(item.mot_cles.length, 6)).map((mot_cle, idx) => (
-                        <span key={idx} className="mr-3 text-nts-green">#{mot_cle}</span>
+                        <span key={idx} className="mr-3 text-nts-green inline-block">#{mot_cle}</span>
                     ))}
                 </p>
             </div>
@@ -421,14 +415,21 @@ const ResultSearch = () => {
                             >
                                 <ul className="z-10 w-20 bg-white rounded divide-y divide-gray-100 shadow  overflow-auto">
                                     <li>
-                                        <button className="block py-2 px-4 hover:bg-gray-100 w-20">
+                                        <button className="block py-2 px-4 hover:bg-gray-100 w-20"
+                                          onClick={() => ConvertToWord(item.resume_convertit)}
+                                        >
                                             Word
                                         </button>
                                     </li>
                                     <li>
-                                        <button className="block py-2 px-4 hover:bg-gray-100 w-20">
-                                            PDF
-                                        </button>
+                                        <a
+                                            className="block py-2 px-4 hover:bg-gray-100 w-20"
+                                            href={`http://localhost:5000/${item.resume_convertit}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                          >
+                                            PDF{" "}
+                                          </a>
                                     </li>
                                 </ul>
                         </div>
@@ -447,7 +448,7 @@ const ResultSearch = () => {
 
 
                         <button className="bg-nts-green text-white px-4 py-1  rounded-md"
-                          onClick={() => handleConvertCv(item.path)
+                          onClick={() => handleConvertCv(item.path , item.id)
                           }
 
                         >

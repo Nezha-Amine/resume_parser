@@ -81,11 +81,15 @@ class DetectRegionsText(Transformer, DefaultParamsWritable, DefaultParamsReadabl
          # Process each file path 
         for path in dataset[self.getInputCol()]:
             resume_2_Img.process(path)
+        
+        print("transorm")
 
         #  load images
-        images_df = self.spark.read.format("binaryFile").option("pathGlobFilter", "*.*").load("../assets/test_pip")
+        images_df = self.spark.read.format("binaryFile").load("../assets/test_pip")
         images_df_pandas = images_df.select("path").toPandas()
         images_df_pandas['path'] = images_df_pandas['path'].str.replace(r'^file:/', '', regex=True)
+
+
 
         # Create a new DataFrame with the modified 'path' column
         images_df = pd.DataFrame(images_df_pandas['path'])

@@ -30,6 +30,7 @@ class Generate():
             - Incluez toutes les informations pertinentes, reformulez si nécessaire pour rendre le contenu plus clair et attrayant pour un recruteur.
             - Assurez-vous que chaque champ est rempli avec des informations correctes et complètes. Si une information est manquante, laissez le champ vide avec des guillemets.
             - Si une information n'existe pas laisser son champ vide.
+            - Dans la section de la description des tâches effectuées pendant les expériences et les projets, si les informations fournies sont insuffisantes, tu peux enrichir et améliorer la description pour donner plus de clarté et de détails.
 
             Structure JSON attendue :
 
@@ -103,7 +104,8 @@ class Generate():
             - Incluez toutes les informations pertinentes, reformulez si nécessaire pour rendre le contenu plus clair et attrayant pour un recruteur.
             - Assurez-vous que chaque champ est rempli avec des informations correctes et complètes. Si une information est manquante, laissez le champ vide avec des guillemets.
             - Si une information n'existe pas laisser son champ vide.
-
+            - Dans la section de la description des tâches effectuées pendant les expériences et les projets, si les informations fournies sont insuffisantes, tu peux enrichir et améliorer la description pour donner plus de clarté et de détails.
+            
             Structure JSON attendue :
 
             {{

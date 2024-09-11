@@ -8,6 +8,7 @@ import ConvertCv from "../pages/ConvertCv";
 import ResumeBuilder from "../components/ResumeBuilder";
 import LoaderPage from "../components/LoaderPage";
 import ResultSearch from "../pages/ResultSearch";
+import CandidateForm from "../components/CandidatureForm";
 export const router = createBrowserRouter([
   {
     element: (
@@ -30,6 +31,10 @@ export const router = createBrowserRouter([
   {
     path: "/",
     element: <Login />,
+  },
+  {
+    path : "/candidature" ,
+    element : <CandidateForm />,
   },
   {
     path: "/login",

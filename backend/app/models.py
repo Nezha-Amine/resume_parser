@@ -4,6 +4,8 @@ from pymongo.collection import Collection
 from typing import Optional
 import re
 from bson.json_util import dumps
+from bson import ObjectId
+
 
 competences_synonymes = {
     # Informatique
@@ -355,35 +357,37 @@ class Resume:
     def __init__(self, mongo: PyMongo):
         self.collection: Collection = mongo.db.cvs
 
-    def create_resume(self, first_name: str, last_name: str, profil: str , resume_file : str , mot_cles : list ) -> None:
+    def create_resume(self, first_name: str="", email: str="" , phone : str="", last_name: str="", profil: str="" , resume_file : str="" ,resume_file_convertit : str="", mot_cles : list = [] ) -> None:
         cv = {
             'first_name': first_name,
             'last_name': last_name ,
-            'email' : "",
-            'phone' : "",
+            'email' : email,
+            'phone' : phone,
             'profil': profil ,
             'resume_path' : resume_file ,
-            'resume_convertit' : "",
+            'resume_convertit_pdf' : resume_file_convertit,
             'mot_cles' : mot_cles
         }
         self.collection.insert_one(cv)
 
 
     def select_resume(self, profile: str, key_skills: list) -> None:
+
         competence_trouvee = []
-        for skill in key_skills:
-            term = skill.lower()
-            for competence, synonymes in competences_synonymes.items():
-                if term in [syn.lower() for syn in synonymes]:
-                    competence_trouvee.append(competence)
-        else :
-            pass
-        
-        for skill in competence_trouvee:
-            if skill in profil_synonymes:
-                key_skills.extend(profil_synonymes[skill])
-        else :
-            pass
+        if key_skills:
+            for skill in key_skills:
+                term = skill.lower()
+                for competence, synonymes in competences_synonymes.items():
+                    if term in [syn.lower() for syn in synonymes]:
+                        competence_trouvee.append(competence)
+
+            # Add any skills related to the found competences
+            for skill in competence_trouvee:
+                if skill in profil_synonymes:
+                    key_skills.extend(profil_synonymes[skill])
+        else:
+            key_skills = []
+
 
         profil_trouvee = []
         term = profile.lower()
@@ -398,135 +402,70 @@ class Resume:
                 extended_profiles.extend(profil_synonymes[pro])
         else :
             pass
-        
-        
-        # pipeline = [
-        #     # Stage 1: Convert profile to lowercase and match profiles
-        #     {
-        #         "$addFields": {
-        #             "profil_lower": {
-        #                 "$toLower": "$profil"
-        #             }
-        #         }
-        #     },
-        #     {
-        #         "$match": {
-        #             "$or": [
-        #                 {
-        #                     "profil_lower": {
-        #                         "$regex": f".*{re.escape(profile.lower())}.*",
-        #                         "$options": "i"
-        #                     }
-        #                 }
-        #                 for profile in extended_profiles
-        #             ]
-        #         }
-        #     },
-        #     # Stage 2: Filter skills after finding profiles
-        #     {
-        #         "$addFields": {
-        #             "matchedSkills": {
-        #                 "$filter": {
-        #                     "input": "$mot_cles",
-        #                     "as": "skill",
-        #                     "cond": {
-        #                         "$or": [
-        #                             {
-        #                                 "$in": [
-        #                                     {
-        #                                         "$toLower": "$$skill"
-        #                                     },
-        #                                     [skill.lower() for skill in key_skills]
-        #                                 ]
-        #                             },
-        #                             {
-        #                                 "$regexMatch": {
-        #                                     "input": "$$skill",
-        #                                     "regex": f".*{'|'.join([re.escape(skill) for skill in key_skills])}.*",
-        #                                     "options": "i"
-        #                                 }
-        #                             }
-        #                         ]
-        #                     }
-        #                 }
-        #             }
-        #         }
-        #     },
-        #     # Filter out documents where 'matchedSkills' is empty
-        #     {
-        #         "$match": {
-        #             "matchedSkills": {
-        #                 "$ne": []
-        #             }
-        #         }
-        #     },
-        #     # Project the fields to show in the results for testing
-        #     {
-        #         "$project": {
-        #             "first_name": 1,
-        #             "last_name": 1,
-        #             "profil": 1,
-        #             "profil_lower": 1,  # Include for debugging
-        #             "mot_cles": 1,      # Include matched skills for debugging
-        #             "resume_path": 1,
-        #             "resume_convertit": 1
-        #         }
-        #     }
-        # ]
+        key_skills = extended_profiles
         pipeline = [
-            # Stage 1: Create a combined list of profiles and skills
-            {
-                "$addFields": {
-                    "combined_list": {
-                        "$concatArrays": [
-                            [profile.lower() for profile in extended_profiles],
-                            [skill.lower() for skill in key_skills]
-                        ]
-                    }
+        # Stage 1: Create a combined list of profiles and skills, handling empty arrays
+        {
+            "$addFields": {
+                "combined_list": {
+                    "$concatArrays": [
+                        {"$ifNull": [[profile.lower() for profile in extended_profiles], []]},
+                        {"$ifNull": [[skill.lower() for skill in key_skills], []]}
+                    ]
                 }
-            },
-            # Stage 2: Filter skills using the combined list
-            {
-                "$addFields": {
-                    "matchedSkills": {
-                        "$filter": {
-                            "input": "$mot_cles",
-                            "as": "skill",
-                            "cond": {
-                                "$in": [
-                                    {
-                                        "$toLower": "$$skill"
-                                    },
-                                    "$combined_list"
-                                ]
-                            }
+            }
+        },
+        # Stage 2: Filter skills using the combined list
+        {
+            "$addFields": {
+                "matchedSkills": {
+                    "$filter": {
+                        "input": "$mot_cles",
+                        "as": "skill",
+                        "cond": {
+                            "$in": [
+                                {
+                                    "$toLower": "$$skill"
+                                },
+                                "$combined_list"
+                            ]
                         }
                     }
                 }
-            },
-            # Filter out documents where 'matchedSkills' is empty
-            {
-                "$match": {
-                    "matchedSkills": {
-                        "$ne": []
-                    }
-                }
-            },
-            # Project the fields to show in the results for testing
-            {
-                "$project": {
-                    "first_name": 1,
-                    "last_name": 1,
-                    "profil": 1,
-                    "combined_list": 1,  # Include for debugging
-                    "mot_cles": 1,      # Include matched skills for debugging
-                    "resume_path": 1,
-                    "resume_convertit": 1
+            }
+        },
+        # Filter out documents where 'matchedSkills' is empty
+        {
+            "$match": {
+                "matchedSkills": {
+                    "$ne": []
                 }
             }
+        },
+        # Project the fields to show in the results for testing
+        {
+            "$project": {
+                "_id" : 1 ,
+                "first_name": 1,
+                "last_name": 1,
+                "profil": 1,
+                "combined_list": 1,  # Include for debugging
+                "mot_cles": 1,       # Include matched skills for debugging
+                "resume_path": 1,
+                "resume_convertit_pdf": 1
+            }
+        }
         ]
+
 
 
         # Execute the MongoDB aggregation pipeline and return the results
         results = dumps(self.collection.aggregate(pipeline))
         return results 
+
+    def update(self, id: str, file_path: str, mot_cles: list) -> None:
+        self.collection.update_one(
+            { "_id": ObjectId(id) }, 
+            { "$set": { "resume_convertit_pdf": file_path, "mot_cles": mot_cles } }  # Set new values
+        )
+

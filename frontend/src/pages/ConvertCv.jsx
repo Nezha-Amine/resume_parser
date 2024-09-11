@@ -45,9 +45,7 @@ function ConvertCv() {
     if (file) {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("nom", data.nom);
-      formData.append("prenom", data.prenom);
-      formData.append("profile", data.profile);
+
       localStorage.setItem("format", data.format);
 
 
@@ -72,9 +70,8 @@ function ConvertCv() {
           // Check response status and navigate to /Validation
           if (convertResponse.status === 200) {
             const data = convertResponse.data;
-            const text = data.text;
-            localStorage.setItem('savedText', text);
-            localStorage.setItem('mots_cles_mongo' , data.combined_list);
+            localStorage.setItem('savedText', data.text);
+            localStorage.setItem('mots_cles_mongo' , data.mot_cles);
             localStorage.setItem('file_path' , data.file_path);
 
             navigate("/Validation");

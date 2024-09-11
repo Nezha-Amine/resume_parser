@@ -1,18 +1,58 @@
 import React, { useState } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
-import jsonData from "../../../backend/jsonData.json";
+import jsonData from "../../../backend1/jsonData.json";
 import plusIcon from "../assets/plusIcon.svg";
 import minusIcon from "../assets/minusIcon.svg";
-import cache from "../assets/cache.png";
-import logoNetsense from "../assets/logoNetsense.png";
-import logolink4u from "../assets/link4u.png" ;
+import { cache } from "../cache-base64.js";
+import { logoNetsense } from "../logo-netsense-base64";
+import { logolink4u } from "../link4u-base64";
 import html2pdf from "html2pdf.js";
 import { FaRedo } from "react-icons/fa";
 import useApi from "../api";
 import { useNavigate } from "react-router-dom";
 import  { useRef } from "react";
 import { useReactToPrint } from 'react-to-print';
+
+import axios from "axios";
+
+// import "../css/style.css";
+
+
+
+function convertDateString(dateString) {
+  const months = {
+      "janvier": "01",
+      "février": "02",
+      "mars": "03",
+      "avril": "04",
+      "mai": "05",
+      "juin": "06",
+      "juillet": "07",
+      "août": "08",
+      "aout": "08",
+      "septembre": "09",
+      "octobre": "10",
+      "novembre": "11",
+      "décembre": "12"
+  };
+  dateString = dateString.trim();
+  const dateParts = dateString.split(' ');
+  
+  if (dateParts.length === 2) {
+      const month = months[dateParts[0].toLowerCase()];
+      const year = dateParts[1];
+      return `${month}/${year}`;
+  } else if (dateParts.length === 3) {
+      const day = dateParts[0].padStart(2, '0'); // Ensure day is two digits
+      const month = months[dateParts[1].toLowerCase()];
+      const year = dateParts[2];
+      return `${day}/${month}/${year}`;
+  } else {
+      return null ;
+  }
+}
+
 
 const ResumeBuilder = () => {
   let jsonString = jsonData.data;
@@ -25,9 +65,25 @@ const ResumeBuilder = () => {
   const educationData = Array.isArray(Data.education) ? Data.education : [];
   const experienceData = Array.isArray(Data.experience) ? Data.experience : [];
   const competencesData = Array.isArray(Data.competences) ? Data.competences : [];
-  const languesData = Array.isArray(Data.langues) ? Data.langues : [];
+  const languesData = Array.isArray(Data.langues) ? 
+  Data.langues
+    .filter(lang => 
+      (typeof lang === 'string' ) || 
+      (typeof lang === 'object' && 'langue' in lang && 'niveau' in lang) 
+    )
+    // Convert objects with valid "langue" and "niveau" to the desired format
+    .map(lang => {
+      if (typeof lang === 'object' && lang.langue) {
+        return `${lang.langue} : ${lang.niveau || ''}`;
+      }
+      // Keep entries already in the desired format
+      return lang;
+    })
+    // Remove any empty strings or invalid results
+    .filter(lang => lang.trim())
+  : [];
+
   const certificationsData = Array.isArray(Data.certifications) ? Data.certifications : [];
-  console.log(projetsData);
   // Convert taches and technologies to arrays if they aren't already
   projetsData.forEach((projet) => {
     projet.taches = Array.isArray(projet.taches) ? projet.taches : [];
@@ -72,34 +128,30 @@ const ResumeBuilder = () => {
   const removeEducationRow = () => {
     setEducation(education.slice(0, -1));
   };
-  
-  const handleExperienceChangeTasks = (index,value) => {
+
+  const handleExperienceChangeTasks = (index, value) => {
     const newExperience = [...experience];
     newExperience[index]["taches"] = value
-      .split('\n')
-      .map(tache => tache.replace(/^-+\s*/, ''));           
+      .split("\n")
+      .map((tache) => tache.replace(/^-+\s*/, ""));
     setExperience(newExperience);
-    console.log(experience[index]['taches']);
+    console.log(experience[index]["taches"]);
+  };
 
-  }
-  
   const handleExperienceChange = (index, field, value) => {
     const newExperience = [...experience];
     if (field === "taches") {
-      
     } else {
       newExperience[index][field] = value;
     }
     setExperience(newExperience);
   };
 
-  
-
   const addExperienceRow = () => {
-      setExperience([
-        ...experience,
-        { start_date: "", end_date: "", poste: "", entreprise: "", taches: [] },
-      ]);
+    setExperience([
+      ...experience,
+      { start_date: "", end_date: "", poste: "", entreprise: "", taches: [] },
+    ]);
   };
 
   const removeExperienceRow = () => {
@@ -147,31 +199,220 @@ const ResumeBuilder = () => {
 
   const addSkillRow = () => {
     setCompetences([...competences, [""]]);
-  }
+  };
 
-  const removeSkillRow  = () => {
+  const removeSkillRow = () => {
     setCompetences(competences.slice(0, -1));
   };
 
   const componentRef = useRef();
-  
-  const handleDownloadPdf = () => {
-    const pdfOptions = {
-      margin: [0, 0, 40, 0],
-      filename: "resume.pdf",
-      image: { type: "jpeg", quality: 1 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    };
+  const api = useApi();
+
+  const handleDownloadPdf = async () => {
+    const rightSideContent = document.getElementById("pdfContent");
+    if (!rightSideContent) {
+      console.error("The element with id 'pdfContent' was not found.");
+      return;
+    }
+
+    // Include the new CSS in the HTML content
+    const pdfStyles = `
+      <style>
+      
+      @media print {
+          body { 
+            margin : 0 ;
+          }
+          p {
+            line-height: 1.5 !important;
+          }
+          li {
+            margin-bottom : 6px !important;
+          }
+          html {
+            -webkit-print-color-adjust: exact;
+          }
+          .job-container {
+            background-image: linear-gradient(to right, #70c9c1, #4a90e2) !important; 
+            color: white ;
+            padding: 1rem 0.9rem; 
+            text-align: center;
+            width : 100% !important :
+            margin-bottom: 10px !important ;
+          }
+          .resume-content{
+              margin-right:100px;
+              margin-left:100px
+            }
     
-    // Generate PDF from the HTML element
-    html2pdf().from(componentRef.current).set(pdfOptions).save();
-    };
-  
-  
+          .section-title {
+              color: #9BBB59;   /* Equivalent to text-nts-text-green */
+              font-weight: bold; /* Equivalent to font-bold */
+              font-size: 18px; /* Equivalent to text-xl */
+            }
 
- 
+      
+          .section-text{
+            font-size:16px;
+            text-align: justify;
+            
+          }
+   
+     
+          .text-center {
+            text-align: center;
+          }
+     
+          .font-bold {
+            font-weight: bold;
+          }
+          .text-2xl {
+            font-size: 20px;
+          }
+      
+          .text-xl {
+            font-size: 20px;
+          }
+          .uppercase {
+            text-transform: uppercase;
+          }
+  
+          .list-disc {
+            list-style-type: disc;
+            text-align:justify;
+          }
+          .list-inside {
+            padding-left: 1.5rem;
+            text-align:justify;
+          }
+        
+          .font-semibold{
+          font-weight:600;
+          
+          }
+          .bg-white {
+            background-color: #ffffff;
+          }
+          .text-black {
+            color: #000000;
+          }
+      
+        .rounded {
+          border-radius: 0.25rem;
+        }
+        .text-lg {
+          font-size: 16px;
+        }
+        .text-black {
+          color: #000000;
+        }
+      
+        .text-gray-700 {
+          color: #616161;
+        }
+        .text-[16px] {
+          font-size: 16px;
+        }
+        .header-logo {
+          position: absolute;
+          top: 0;
+          left: 0;
+          height: 2.19cm;
+          width: 2.38cm;
+          background-size: contain;
+          background-repeat: no-repeat;
+        }
+        .header-logo-netsense {
+          position: absolute;
+          top: 2%;
+          right: 5%;
+          height: 1.57cm;
+          width: 6.35cm;
+          background-size: contain;
+          background-repeat: no-repeat;
+        }
+          .name{
+            margin-top:10%;
+            margin-bottom:30px;
+            margin-left:100px;
+            text-align: left;
+            font-size:30px;
+          }
+          .py-10 {
+              padding-bottom: 2.5rem;
+          }
+          .display{
+            margin-top: 60px !important ;
+          }
+  }
+      </style>
+    `;
 
+    const htmlContent = `
+      <html>
+        <head>
+          ${pdfStyles}
+        </head>
+        <body>
+        
+          ${rightSideContent.outerHTML}
+        </body>
+      </html>
+    `;
+    const format = localStorage.getItem('format');
+    const file_path_original = localStorage.getItem('file_path');
+
+    try {
+      const token = localStorage.getItem("token");
+      const id = localStorage.getItem('id');
+      const response = await axios.post(
+        "http://localhost:5000/pdf/generate-pdf",
+        { htmlContent: htmlContent , format : format , file_path_original : file_path_original},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        const pdf_path  = response.data;
+        const path = pdf_path.pdf_url.replace(/^.*\/pdf\//, 'pdf/');
+        const original_pdf_path = localStorage.getItem("file_path");
+        const nom = localStorage.getItem("nom");
+        const prenom = localStorage.getItem("prenom");
+        const profil = localStorage.getItem("profile_to_save");
+        const mot_cles = localStorage.getItem("mots_cles_mongo");
+        const formData = {
+          id : id || null,
+          nom: nom ,
+          prenom : prenom ,
+          profil : profil ,
+          mot_cles : mot_cles ,
+          original_pdf_path : original_pdf_path ,
+          cv_convertit : path
+        };
+        const convertResponse = await api.post("/upload", formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+  
+        // Check response status and navigate to /Validation
+        if (convertResponse.status === 200) {
+           // Trigger file download or provide a link to download the PDF
+            window.open(pdf_path.pdf_url);
+        } else {
+           // Trigger file download or provide a link to download the PDF
+            window.open(pdf_path.pdf_url);
+        }
+      }
+    } catch (err) {
+      console.error("Error generating PDF:", err);
+    }
+  };
 
   const handleCertificationChange = (index, field, value) => {
     const newCertifications = [...certifications];
@@ -202,8 +443,6 @@ const ResumeBuilder = () => {
     setLangues(newLangue);
   };
 
-  
-  
   // const handleAlert = () => {
   //   alert("Please save the pdf in the path: C:\\Users\\hp\\resume_parser1\\backend1\\cv_convertits");
   // };
@@ -220,45 +459,40 @@ const ResumeBuilder = () => {
 
   //   // // Use html2pdf to generate the PDF
   //   // html2pdf().from(rightSideContent).set(opt).save();
-    
-   
+
   // };
-  const api = useApi();
   const navigate = useNavigate();
 
-  const handleRefresh = async() => {
+  const handleRefresh = async () => {
     try {
       const token = localStorage.getItem("token");
-      const text = localStorage.getItem('savedText');
+      const text = localStorage.getItem("savedText");
       const formData = {
         text: text,
       };
       navigate("/loader");
-      
+
       // Send formData to the /convert endpoint
       const convertResponse = await api.post("/regenerate", formData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
 
-        // Check response status and navigate to /Validation
-        if (convertResponse.status === 200) {
-          
-            navigate("/Validation");
-              setTimeout(() => {
-                window.location.reload();
-            }, 0);
-        } else {
-          const { error } = convertResponse.data;
-          console.log(error);
-        }
-
+      // Check response status and navigate to /Validation
+      if (convertResponse.status === 200) {
+        navigate("/Validation");
+        setTimeout(() => {
+          window.location.reload();
+        }, 0);
+      } else {
+        const { error } = convertResponse.data;
+        console.log(error);
+      }
     } catch (error) {
       console.error("An error occurred:", error);
     }
-
   };
 
   return (
@@ -295,6 +529,15 @@ const ResumeBuilder = () => {
               placeholder="Profil"
               className="w-full p-2 mb-4 bg-white text-black border-2 border-white focus:outline-none focus:border-white rounded"
             />
+            <input
+              type="text"
+              id="expYears"
+              value={personalInfo.expYears}
+              onChange={handlePersonalInfoChange}
+              placeholder="année d'expérience"
+              className="w-full p-2 mb-4 bg-white text-black border-2 border-white focus:outline-none focus:border-white rounded"
+
+            />
             <textarea
               id="workSummary"
               value={personalInfo.workSummary}
@@ -302,7 +545,7 @@ const ResumeBuilder = () => {
               placeholder="Résumé"
               className="w-full p-2 mb-4 bg-white text-black border-2 border-white focus:outline-none focus:border-white rounded h-24"
             />
-            
+
           </div>
 
           {/* Education */}
@@ -369,24 +612,28 @@ const ResumeBuilder = () => {
             {experience.map((exp, index) => (
               <div key={index} className="experience-row mb-4">
                 <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      value={exp.start_date}
-                      onChange={(e) =>
-                        handleExperienceChange(index, "start_date", e.target.value)
-                      }
-                      placeholder="Date de début"
-                      className="w-full p-2 mb-2 bg-white text-black border-2 border-white focus:outline-none focus:border-white rounded"
-                    />
-                    <input
-                      type="text"
-                      value={exp.end_date}
-                      onChange={(e) =>
-                        handleExperienceChange(index, "end_date", e.target.value)
-                      }
-                      placeholder="Date de fin"
-                      className="w-full p-2 mb-2 bg-white text-black border-2 border-white focus:outline-none focus:border-white rounded"
-                    />
+                  <input
+                    type="text"
+                    value={exp.start_date}
+                    onChange={(e) =>
+                      handleExperienceChange(
+                        index,
+                        "start_date",
+                        e.target.value
+                      )
+                    }
+                    placeholder="Date de début"
+                    className="w-full p-2 mb-2 bg-white text-black border-2 border-white focus:outline-none focus:border-white rounded"
+                  />
+                  <input
+                    type="text"
+                    value={exp.end_date}
+                    onChange={(e) =>
+                      handleExperienceChange(index, "end_date", e.target.value)
+                    }
+                    placeholder="Date de fin"
+                    className="w-full p-2 mb-2 bg-white text-black border-2 border-white focus:outline-none focus:border-white rounded"
+                  />
                 </div>
                 <input
                   type="text"
@@ -406,11 +653,11 @@ const ResumeBuilder = () => {
                   placeholder="Entreprise"
                   className="w-full p-2 bg-white mb-2 text-black border-2 border-white focus:outline-none focus:border-white rounded"
                 />
-               <textarea
+                <textarea
                   id="taches_exp"
-                  value={exp.taches.map(tache => `- ${tache}`).join('\n')}
+                  value={exp.taches.map((tache) => `- ${tache}`).join("\n")}
                   onChange={(e) =>
-                    handleExperienceChangeTasks(index,e.target.value)
+                    handleExperienceChangeTasks(index, e.target.value)
                   }
                   placeholder="Description"
                   className="w-full p-2 bg-white text-black border-2 border-white focus:outline-none focus:border-white rounded h-24"
@@ -625,7 +872,6 @@ const ResumeBuilder = () => {
             </div>
           )}
 
-
           {/* Langues */}
           <div className=" mb-6">
             <h2 className="text-white text-2xl font-semibold mb-4">Langues</h2>
@@ -658,116 +904,109 @@ const ResumeBuilder = () => {
         </div>
 
         {/* Right side - PDF Content */}
-        <div className="pdf-content w-[65%] py-10 px-0 overflow-y-auto h-full bg-nts-light-green " ref={componentRef}   style={{ width: '100%' , fontFamily :"Times New Roman" }}
+        <div
+          className="pdf-content w-[65%] py-10 px-0 overflow-y-auto h-full bg-nts-light-green "
+          ref={componentRef}
+          style={{ width: "100%", fontFamily: "Times New Roman" }}
         >
-           <style>
-              {`
-              @media print {
-
-                @page {
-                  margin-top : 70px;
-                  margin-bottom : 20px ;
-                }
-                @page :first {
-                  margin-top: 0px !important;
-                }
-                .download{
-                  display : None;
-                }
-              } 
-              
-              `}
-              
-            </style>
           <div id="pdfContent">
-       {/* Personal Info Display */}
-       <div className="flex justify-between items-center mx-10 mt-[-20px]">
-              <img src={cache} alt="cache" className="w-32" />
-            
+            {/* Personal Info Display */}
+            {/* <div className="flex justify-between items-center mx-10 mt-[-20px]">
+              <img src={cache} alt="cache" className="w-32 header-logo" />
 
-              {format === 'Netsense' ? (
+              {format === "Netsense" ? (
                 <img
                   src={logoNetsense}
                   alt="logoNetsense"
-                  className="w-40 h-16"
+                  className="w-40 h-16 header-logo-netsense"
                 />
-              ) : 
-              <img
+              ) : (
+                <img
                   src={logolink4u}
                   alt="logoNetsense"
-                  className="w-40 h-16"
+                  className="w-40 h-16 header-logo-netsense"
                 />
-                }
-            </div>
-            <div className="text-center mb-8">
-              <h1 className="font-bold text-2xl mb-1 text-black">{personalInfo.name}</h1>
+              )}
+            </div> */}
+            <div className="text-center mb-8 ">
+              <h1 className="font-bold text-2xl mb-1 text-black name">
+                {personalInfo.name}
+              </h1>
             </div>
 
             {/* Job Title Container */}
-            <div className="bg-gradient-to-r from-[#70c9c1] to-[#4a90e2] text-white p-4 text-center ">
-              <h2 className="font-bold text-xl uppercase">
+            <div className="job-container bg-gradient-to-r from-[#70c9c1] to-[#4a90e2] text-white p-4 text-center   ">
+              <h2 className="font-bold text-xl uppercase ">
                 {personalInfo.jobTitle}
               </h2>
               <p className="font-semibold">
-                {personalInfo.expYears > 1
-                  ? `Possède plus de ${personalInfo.expYears} ans d'expérience`
-                  : `Possède ${personalInfo.expYears} an d'expérience`}
+              {personalInfo.expYears == 0
+                ? "" 
+                : personalInfo.expYears > 1
+                ? `Possède plus de ${personalInfo.expYears} ans d'expérience`
+                : `Possède ${personalInfo.expYears} an d'expérience`
+              }
+
               </p>
+                        </div>
+            <div className="display">
+
             </div>
-            <div className="px-24">
+            <div className="px-24 resume-content">
               {/* Résumé Professionnel */}
-              <div className="mt-8">
-                <h3 className="text-nts-text-green font-bold text-xl mb-4">
+              <div className="mt-8  ">
+                <h3 className="text-nts-text-green font-bold text-xl mb-4 section-title">
                   Résumé Professionnel :
                 </h3>
-                <p className="text-justify text-gray-800">
+                <p className="text-justify text-gray-800 section-text">
                   {personalInfo.workSummary}
                 </p>
               </div>
-
               {/* Formation */}
-              <div className="mt-6 text-justify">
-                <h3 className="text-nts-text-green font-bold text-xl mb-4">
+              <div className="mt-8  ">
+                <h3 className="text-nts-text-green font-bold text-xl mb-4 section-title">
                   Formation :
                 </h3>
                 {education.map((edu, index) => (
-                  <div key={index} className="mb-4 inline text-justify">
-                    <strong className="
-                       text-gray-900">
-                        {edu.annee} : 
-                      </strong>
+                  <div key={index} className="mb-4">
+                    <p className="font-semibold text-gray-900">
+                      {edu.diplome}
+                    </p>
                     <p className="text-gray-700">
-                       {edu.diplome} : {edu.etablissement}
+                      { edu.etablissement} - { edu.annee}
                     </p>
                   </div>
-                  
                 ))}
               </div>
-
               {/* Expérience Professionnelle */}
-              {experience.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-nts-text-green font-bold text-xl mb-4">
+              <div className="mt-8  ">
+                <h3 className="text-nts-text-green font-bold text-xl mb-4 section-title">
                   Expérience Professionnelle :
                 </h3>
                 {experience.map((exp, index) => (
-                  <div key={index} className="mb-6 text-justify">
-                    <h4 className="font-semibold text-gray-900">Du  {exp.start_date}  à  {exp.end_date} : {exp.poste} chez {exp.entreprise}</h4>
-                    <p className="ml-4 mt-2 text-gray-800">
-                      {exp.taches.map((tache, i) => (
-                        <span key={i}>
-                          - {tache}
-                          <br />
-                        </span>
+                  <div key={index} className="mb-6">
+                    <h4 className="font-semibold text-gray-900">
+                       {convertDateString(exp.start_date) || exp.start_date}
+
+                       {exp.end_date
+                        && exp.end_date.trim() !== "" ? ` jusqu'à ${convertDateString(exp.end_date) || exp.end_date}` : ""} - {exp.poste} chez {exp.entreprise}  
+                    </h4>
+                    {/* <p className="text-gray-700">
+                      {exp.entreprise} - {exp.start_date}    
+                      {exp.end_date && exp.end_date.trim() !== "" ? ` jusqu'à ${exp.end_date}` : ""}
+
+                    </p> */}
+                    <ul className="list-disc list-inside ml-4 mt-2 text-gray-800">
+                      {exp.taches.map((task, i) => (
+                        <li key={i}>{task}</li>
                       ))}
-                    </p>
+                    </ul>
                   </div>
                 ))}
               </div>
-              )}
               {/* Compétences */}
-              <div className="mt-6">
-                <h3 className="text-nts-text-green font-bold text-xl mb-4">
+              <div className="mt-8 ">
+                <h3 className="text-nts-text-green font-bold text-xl mb-4 section-title">
                   Compétences :
                 </h3>
                 <ul className="list-disc list-inside ml-4 text-gray-800">
@@ -776,17 +1015,16 @@ const ResumeBuilder = () => {
                   ))}
                 </ul>
               </div>
-             
-               {/* Projets */}
-               {projets.length > 0 && (
-                <div className="projets mt-6 no-page-break">
-                  <h2 className="text-nts-text-green font-bold text-xl mb-4">
+              {/* Projets */}
+              {projets.length > 0 && (
+                <div className="projets mt-8 ">
+                  <h2 className="text-nts-text-green font-bold text-xl mb-4 section-title">
                     Projets
                   </h2>
                   {projets.map((projet, index) => (
                     <div key={index} className="projet-item mb-4">
                       <h3 className="text-lg font-semibold text-black">
-                        {projet.titre_projet} : 
+                        {projet.titre_projet}
                       </h3>
                       {projet.taches.length > 0 && (
                         <ul className="list-disc list-inside ml-4 mt-2 text-gray-800">
@@ -798,39 +1036,33 @@ const ResumeBuilder = () => {
                       {projet.technologies.length > 0 && (
                         <div>
                           <span className="text-gray-700 font-semibold mr-2  text-[16px]">
-                            Technologies:
+                            Technologies :
                           </span>
                           <span className="text-gray-700  ">
-                            {projet.technologies.join(", ")}
+                            {  projet.technologies.join(", ")}
                           </span>
                         </div>
                       )}
                     </div>
                   ))}
                 </div>
-              )}{" "} 
-            {/* Certifications */}
-            {certifications.length > 0 && (
-                <div className="projets mt-6 no-page-break">
-                  <h2 className="text-nts-text-green font-bold text-xl mb-4">
+              )}{" "}
+              {/* Certifications */}
+              {certifications.length > 0 && (
+                <div className="projets mt-8 ">
+                  <h2 className="text-nts-text-green font-bold text-xl mb-4 section-title">
                     Certificats
                   </h2>
                   {certifications.map((certif, index) => (
                     <div key={index} className="projet-item mb-4">
-                      <h4 className="font-semibold text-gray-900">
+                      <p className="font-semibold text-gray-900">
                         {certif.nom}
-                      </h4>
-                      <span className="text-gray-700">
+                      </p>
+                      <p className="text-gray-700">
                         {certif.organisme} 
-                            
-                            {certif.date && (
-                       
-                       <span>- {certif.date}</span> 
-                      
-                      )}   
-                          
-                        
-                      </span>
+                        {certif.date && certif.date.trim() !== "" ? ` - ${certif.date}` : ""}
+
+                      </p>
                       {certif.score && (
                         <div className=" text-gray-700">
                           <span className=" font-semibold mr-2  text-[16px]">
@@ -843,25 +1075,20 @@ const ResumeBuilder = () => {
                   ))}
                 </div>
               )}
-            
-            
-            {/* Langues */}
- {langues.length > 0 && (
-              <div className="langues mt-6 text-justify">
-                <h2 className="text-nts-text-green font-bold text-xl mb-4 ">Langues</h2>
-                {langues.map((langue, index) => (
-                  <p key={index} className="langue-item text-gray-700">
-                    {langue}
-                  </p>
-                ))}
-              </div>
-            )}
-              </div>
-        
-
-          
-
-           
+              {/* Langues */}
+              {langues.length > 0 && (
+                <div className=" mt-8 ">
+                  <h2 className="text-nts-text-green font-bold text-xl mb-4 section-title ">
+                    Langues
+                  </h2>
+                  {langues.map((langue, index) => (
+                    <p key={index} className="langue-item text-black">
+                      {langue}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-end download">
@@ -869,7 +1096,6 @@ const ResumeBuilder = () => {
               onClick={() => {
                 handleDownloadPdf();
               }}
-
               className="bg-nts-dark-green text-white p-4 mt-10 rounded shadow-md hover:bg-nts-dark-green-dark"
             >
               Télécharger le PDF

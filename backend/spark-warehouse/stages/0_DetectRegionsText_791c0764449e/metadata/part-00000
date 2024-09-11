@@ -1,0 +1,1 @@
+{"class":"custom_package.transformer.DetectRegionsText","timestamp":1725803139166,"sparkVersion":"3.5.1","uid":"DetectRegionsText_791c0764449e","paramMap":{"inputCol":"path","outputCol":"json_res"},"defaultParamMap":{"inputCol":"path","outputCol":"json_res"}}

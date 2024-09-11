@@ -1,133 +1,123 @@
-
-body {
-    background-color: #9C27B0;
-    color: #fff;
-    font-family: 'Times New Roman', Times, serif; 
-    font-size: 18px;
-    forced-color-adjust: none;
-}
-h6{
-    font-weight: bold;
-}
-.container-fluid {
-    max-width: 1300px;
-    height: 100vh; /* Ensure full viewport height */
-    overflow: hidden; /* Prevent overall page scroll */
-}
-
-.left-panel, .right-panel {
-    height: 100vh; /* Full height to enable scrolling within the panels */
-    overflow-y: auto; /* Enable vertical scrolling */
-    padding: 20px;
-    border: none; /* Remove any borders */
-}
-
-.left-panel {
-    background-color: #D500F9;
-}
-
-.right-panel {
-    background-color: #fff;
-    color: #000;
-    padding: 0;
+        @page {
+      margin-top:50px; /* Set top, bottom, left, and right margins to 1 inch */
+      margin-bottom :50px;
+      }
+    body {
+      margin: 0; /* Remove body margin as it's handled by @page */
+    }
+      html {
+        -webkit-print-color-adjust: exact;
+      }
+      .job-container {
+        background-image: linear-gradient(to right, #70c9c1, #4a90e2) !important; 
+        color: white ;
+        padding: 1rem; 
+        text-align: center;
+       
+      }
+       .resume-content{
+        margin-right:100px;
+        margin-left:100px
+        
+        
+        }
+     .section-title {
+  color: #9BBB59;   /* Equivalent to text-nts-text-green */
+  font-weight: bold; /* Equivalent to font-bold */
+  font-size: 1.25rem; /* Equivalent to text-xl */
 }
 
-.form-control, .form-label {
-    color: #000;
-}
-
-.header-icon {
-    display: inline-block;
-    margin-right: 8px;
-}
-
-.custom-icon {
-    color: #9C27B0;
-}
-
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-}
-
-.left-image {
-    max-width: 12%; /* Adjust size as needed */
-}
-
-.right-image {
-    max-width: 22%; /* Adjust size as needed */
-    margin-left: auto; /* Pushes the right image to the far right */
-}
-
-.job-title-container {
-    background: linear-gradient(to right, #70c9c1, #4a90e2);
-    padding: 10px;
-    width: 100%; /* Ensure the width fills the entire right panel */
-    text-align: center;
-    display: flex;
-    flex-direction: column; /* Stack children in a column */
-    justify-content: center; /* Center content vertically */
-    align-items: center; /* Center content horizontally */
-    border-top: 2px solid #34beb2;
-    border-bottom: 2px solid #34beb2;
-}
-
-
-#display-job-title, #display-annee {
-    color: #ffffff; /* White text color */
-    font-weight: bold; /* Bold text */
-    font-size: 22px; /* Adjust font size if needed */
-    margin: 5px 0; /* Margin to space out text */
-}
-
-#display-job-title {
-    text-transform: uppercase; /* Make text uppercase */
-
-}
-#display-annee {
-    font-size: 16px; /* Adjust font size if needed */
-}
-
-#section-title {
-    color: #70c9c1;
-}
-
-#formation-content {
-    margin-bottom: 1rem;
-}
-#formation-content h6 {
-    font-size: 16px; /* Adjust font size as needed */
-    font-weight: bold; /* Make the text bold */
-    margin-bottom: 10px; /* Space below the <h6> */
-}
-
-#formation-content p {
-    margin: 5px 0; /* Space above and below each <p> */
-    font-size: 14px; /* Adjust font size as needed */
-}
-#formation-content #fdate , #formation-content .fdate {
-    font-weight: bold;
-}
-
-#work-summary-content , #formation-content , #experience-content {
-    text-align: justify; 
-}
-
-
-.inputs_container input:focus {
-    outline: none; 
-    border: none; 
-    box-shadow: none; 
-}
-.span-block {
-    display: block;
-}
-
-.tasks-container {
-    border-radius: 5px;
-    max-height: 130px;
-    overflow-y: auto;
-}
-
+      
+    .section-text{
+    font-size:18px;
+    text-align: justify;
+    
+    }
+    .mb-2{
+      margin-bottom : 2px;
+    }
+     
+      .text-center {
+        text-align: center;
+      }
+     
+      .font-bold {
+        font-weight: bold;
+      }
+      .text-2xl {
+        font-size: 1.5rem;
+      }
+      
+     
+      .text-xl {
+        font-size: 1.25rem;
+      }
+      .uppercase {
+        text-transform: uppercase;
+      }
+  
+      .list-disc {
+        list-style-type: disc;
+        text-align:justify;
+      }
+      .list-inside {
+        padding-left: 1.5rem;
+        text-align:justify;
+      }
+     
+    .font-semibold{
+    font-weight:600;
+    
+    }
+      .bg-white {
+        background-color: #ffffff;
+      }
+      .text-black {
+        color: #000000;
+      }
+     
+      .rounded {
+        border-radius: 0.25rem;
+      }
+      .text-lg {
+        font-size: 1.125rem;
+      }
+      .text-black {
+        color: #000000;
+      }
+      .left{
+        display: none;
+      }
+      .text-gray-700 {
+        color: #000000;
+      }
+      .text-[16px] {
+        font-size: 16px;
+      }
+      .header-logo {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 2.19cm;
+        width: 2.38cm;
+       background-size: contain;
+        background-repeat: no-repeat;
+      }
+      .header-logo-netsense {
+        position: absolute;
+        top: 2%;
+        right: 5%;
+        height: 1.57cm;
+        width: 6.35cm;
+       background-size: contain;
+        background-repeat: no-repeat;
+      }
+        .name{
+        margin-top:17%;
+        margin-bottom:30px;
+        margin-left:100px;
+         text-align: left;
+         font-size:30px;
+       
+        
+        }

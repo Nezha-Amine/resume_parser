@@ -17,11 +17,21 @@ import shutil
 from custom_package import model_generate
 import pandas as pd
 from flask import Blueprint, request, jsonify, send_file
+import subprocess
+import requests
+import pypandoc
+from flask import url_for
+from flask import send_from_directory
+import win32com.client
+import pythoncom
+
 
 os.environ['PYSPARK_PYTHON'] = sys.executable
 os.environ['PYSPARK_DRIVER_PYTHON'] = sys.executable
 
 auth_bp = Blueprint('auth', __name__)
+pdf_bp = Blueprint('pdf', __name__)
+usr_bp = Blueprint('usr',__name__)
 
 user_model = User(mongo)
 cv_model = Resume(mongo)
@@ -76,11 +86,66 @@ def register():
     user_model.create_user(email, password, role)
     return jsonify(message="User registered successfully"), 201
 
-def upload_resume(name,surname,profil,file_path , mot):
-    
-    cv_model.create_resume(name, surname, profil, file_path, mot)
+@auth_bp.route('/upload', methods=['POST'])
+def upload_resume():
+    data = request.json
+    id = data.get('id')
+    name = data.get("nom")
+    surname = data.get("prenom")
+    profil = data.get("profil")
+    file_path = data.get("original_pdf_path")
+    file_path_convertit = data.get("cv_convertit")
+    mot = data.get("mot_cles")
+    mot_cles = [item.strip() for item in mot.split(',') if item.strip()]
+    if id :
+        cv_model.update(id,file_path_convertit,mot_cles)
 
+    else :
+        
+        cv_model.create_resume(
+            first_name=name,
+            last_name=surname,
+            profil=profil,
+            resume_file=file_path,
+            resume_file_convertit=file_path_convertit,
+            mot_cles=mot_cles
+        )
     return jsonify({"cv_path": file_path }), 201
+
+@usr_bp.route('/save', methods=['POST'])
+def save():
+    data = request.get_json()
+    nom = data.get('nom')
+    prenom = data.get('prenom')
+    email = data.get('email')
+    telephone = data.get('telephone')
+    profil = data.get('profil')
+    file = request.files.get('resume') 
+
+
+    file_path = os.path.join('uploads', file.filename)
+
+    if os.path.exists(file_path):
+        return jsonify({"message": "Ce Candidature existe déjà"}), 409
+    else :
+        if file is None or file.filename == '':
+            return jsonify({"error": "No selected file"}), 400
+
+        if not allowed_file(file.filename):
+            return jsonify({"error": "File type not allowed"}), 400
+        if file:
+            file_path = os.path.join('uploads', file.filename)
+            file.save(file_path)
+    
+    cv_model.create_resume(
+        first_name=nom,
+        email=email,
+        phone=telephone,
+        last_name=prenom,
+        profil=profil,
+        resume_file=file_path,
+    )
+    return jsonify({"cv_path": 'done' }), 201
 
 
 def allowed_file(filename):
@@ -88,27 +153,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-
-@auth_bp.route('/convert', methods=['POST'])
-def convert_resume():
-    try:
-        
-        file_path = None
-        if request.form.get('nom') :
-            file = request.files.get('file')
-            if file is None or file.filename == '':
-                return jsonify({"error": "No selected file"}), 400
-
-            if not allowed_file(file.filename):
-                return jsonify({"error": "File type not allowed"}), 400
-            if file:
-                file_path = os.path.join('uploads', file.filename)
-                file.save(file_path)
-        else :
-            file_path = request.form.get('file')    
-        
-
-        
+def generate(file_path):
         # Initialize SparkSession
         spark = SparkSession.builder \
             .appName("PipelineSession") \
@@ -116,7 +161,7 @@ def convert_resume():
             .getOrCreate()
         
         # Read binary file data
-        cv_df = spark.read.format("binaryFile").option("pathGlobFilter", "*.*").load(file_path)
+        cv_df = spark.read.format("binaryFile").load(file_path)
         cv_pandas = cv_df.select("path").toPandas()
         cv_pandas['path'] = cv_pandas['path'].str.replace(r'^file:/', '', regex=True)
         
@@ -162,24 +207,64 @@ def convert_resume():
         
         combined_list = mot_cles + skills
         
-        if request.form.get('nom') :
-            # upload_resume(name,surname,profil,file_path,combined_list)
-            json_res = {
-                'mot_cles' : combined_list ,
+        combined_list_str = ', '.join(map(str, combined_list))
+        json_res = {
+                'mot_cles' : combined_list_str,
                 'text' : text ,
                 'file_path' : file_path
-            }
-       
-        
+        }
 
-        shutil.rmtree('../assets')
-        shutil.rmtree('tmp_folder')
+       
+        shutil.rmtree('C:/Users/hp/resume_parser1/assets')
+        if os.path.exists('C:/Users/hp/resume_parser1/tmp_folder'):
+            shutil.rmtree('C:/Users/hp/resume_parser1/tmp_folder')
+
         spark.stop()
 
+        return json_res
+
+
+@auth_bp.route('/convert', methods=['POST'])
+def convert_resume():
+    try:
+        data = None
+        file = None
+        content_type = request.content_type
+        if content_type == 'application/json':
+            data = request.json
+        else : 
+            file = request.files.get('file')
+        file_path = None
+        
+
+        # Case 1: Handle file upload
+        if file:
+            if file.filename == '':
+                return jsonify({"error": "No selected file"}), 400
+
+            if not allowed_file(file.filename):
+                return jsonify({"error": "File type not allowed"}), 400
+
+            # Save the file to a specific path
+            file_path = os.path.join('uploads', file.filename)
+            file.save(file_path)
+
+        # Case 2: Handle JSON payload (when no file is uploaded)
+        elif data:
+            file_path = data.get("cv")
+            if not file_path:
+                return jsonify({"error": "No profile path provided"}), 400
+        
+        else:
+            return jsonify({"error": "No file or profile provided"}), 400
+
+        # Call the generate function to process the file or profile
+        json_res = generate(file_path)
         return jsonify(json_res), 200
-    
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @auth_bp.route('/search', methods=['POST'])
 def search_resume():
@@ -233,3 +318,84 @@ def download_resume(filename):
         return send_file(file_path, as_attachment=False)
     else:
         return jsonify({"error": "File not found"}), 404
+    
+
+@pdf_bp.route('/<filename>', methods=['GET'])
+def serve_pdf(filename):
+    try:
+        # Define the directory where PDFs are stored
+        pdf_directory = 'C:\\Users\\hp\\resume_parser1\\backend1\\pdf_service\\generated'
+        
+        # Check if the file exists
+        if not os.path.exists(os.path.join(pdf_directory, filename)):
+            return jsonify({"error": "File not found"}), 404
+
+        # Serve the file
+        return send_from_directory(pdf_directory, filename) 
+    
+    except Exception as e:
+        print("Exception in serving PDF:", e)
+        return jsonify({"error": str(e)}), 500
+
+@pdf_bp.route('/generate-pdf', methods=['POST'])
+def generate_pdf():
+    try:
+        data = request.get_json()
+        html_content = data.get('htmlContent')
+        format = data.get('format')
+        file_path_original = data.get('file_path_original')
+        
+        if not html_content:
+            return jsonify({"error": "No HTML content provided"}), 400
+
+        node_service_url = 'http://localhost:3001/generate-pdf'
+        response = requests.post(node_service_url, json={"htmlContent": html_content , "format" : format , "file_path_original" : file_path_original})
+
+        print("Node.js service response status:", response.status_code)
+        print("Node.js service response body:", response.text)
+
+        if response.status_code == 200:
+            pdf_filename = response.json().get('pdf_path').split('\\')[-1]  # Extract filename
+            pdf_url = url_for('pdf.serve_pdf', filename=pdf_filename, _external=True)
+            return jsonify({"pdf_url": pdf_url}), 200
+        else:
+            return jsonify({"error": "Failed to generate PDF"}), response.status_code
+    except Exception as e:
+        print("Exception in generating PDF:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@auth_bp.route('/converttoword', methods=['POST'])
+def converttoword():
+    try:
+        data = request.json
+        file = data.get("file")
+
+        if not file:
+            return jsonify({"error": "No file URL provided"}), 400
+
+        file_name = os.path.basename(file)
+
+        pdfdoc = f'C:/Users/hp/resume_parser1/backend1/pdf_service/generated/{file_name}'
+        todocx = os.path.join('C:/Users/hp/resume_parser1/backend1/pdf2word', file_name.replace('.pdf', '.docx'))
+
+        # Initialize Word application
+        word = win32com.client.Dispatch("Word.Application" , pythoncom.CoInitialize())
+        word.visible = 1
+
+        # Open the PDF document
+        wb1 = word.Documents.Open(pdfdoc, False, False, False)
+        
+        # Save as DOCX
+        wb1.SaveAs(todocx, FileFormat=16)  # File format for DOCX
+        
+        # Close the document
+        wb1.Close(SaveChanges=False)
+        wb2 = word.Documents.Open(todocx)
+        
+        return jsonify({"message": "File converted and opened successfully", "docx_path": todocx}), 200
+
+    except Exception as e:
+        print("Exception in converting to Word:", e)
+        return jsonify({"error": str(e)}), 500
+
